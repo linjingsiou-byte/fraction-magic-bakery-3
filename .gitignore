@@ -1,0 +1,7 @@
+# Local node modules
+node_modules/
+
+# OS metadata files
+.DS_Store
+Thumbs.db
+Desktop.ini

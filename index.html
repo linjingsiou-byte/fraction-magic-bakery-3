@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分數魔法烘焙屋 3.0 - 三年級分數加減</title>
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Outfit:wght@400;600;800&family=Playpen+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- 引入主樣式表 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 魔法背景粒子容器 -->
+    <div id="particles-container"></div>
+
+    <!-- 頂部導覽列 -->
+    <header class="app-header">
+        <div class="logo-area">
+            <span class="magic-sparkle">✨</span>
+            <h1 class="logo-text">分數魔法烘焙屋 3.0</h1>
+            <span class="grade-tag">小三數學：分數的加減</span>
+        </div>
+        
+        <div class="control-panel">
+            <!-- 模式切換 -->
+            <div class="mode-selector">
+                <button id="btn-mode-single" class="mode-btn active" data-mode="single">
+                    <span class="icon">👤</span> 單人自主學習
+                </button>
+                <button id="btn-mode-double" class="mode-btn" data-mode="double">
+                    <span class="icon">👥</span> 雙人烘焙對決
+                </button>
+            </div>
+            
+            <!-- 語音開關 -->
+            <button id="btn-tts-toggle" class="tts-btn active" title="切換語音報讀">
+                <span class="tts-icon">🔊</span>
+                <span class="tts-text">語音報讀：開</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主遊戲容器 -->
+    <main id="game-app">
+        <!-- ==================== 歡迎與大廳畫面 ==================== -->
+        <section id="screen-lobby" class="screen active">
+            <div class="lobby-card">
+                <div class="lobby-badge">歡迎光臨 🍰</div>
+                <h2 class="lobby-title">魔法烘焙師的修練旅程</h2>
+                <p class="lobby-subtitle">在這裡，你將透過調配魔法原料、烘烤美味糕點，來掌握分數的加減魔法！</p>
+                
+                <!-- 單人關卡地圖 -->
+                <div id="single-map-area" class="map-container">
+                    <h3 class="section-title">🔮 魔法關卡修練圖</h3>
+                    <div class="level-nodes">
+                        <div class="level-node active" data-level="1">
+                            <div class="node-circle">1</div>
+                            <span class="node-name">魔法麵包拼拼樂</span>
+                            <span class="node-desc">和 1 一樣大</span>
+                        </div>
+                        <div class="level-line"></div>
+                        <div class="level-node locked" data-level="2">
+                            <div class="node-circle">2</div>
+                            <span class="node-name">魔法吐司大烤爐</span>
+                            <span class="node-desc">分數的加法</span>
+                        </div>
+                        <div class="level-line"></div>
+                        <div class="level-node locked" data-level="3">
+                            <div class="node-circle">3</div>
+                            <span class="node-name">老鼠小偷的挑戰</span>
+                            <span class="node-desc">分數的減法</span>
+                        </div>
+                        <div class="level-line"></div>
+                        <div class="level-node locked" data-level="4">
+                            <div class="node-circle">4</div>
+                            <span class="node-name">神奇彩帶裝飾秀</span>
+                            <span class="node-desc">1 減分數的減法</span>
+                        </div>
+                    </div>
+                    <button id="btn-start-single" class="start-game-btn">開始單人修練之旅 ✨</button>
+                </div>
+
+                <!-- 雙人對戰設定區 -->
+                <div id="double-setup-area" class="setup-container hidden">
+                    <h3 class="section-title">⚔️ 烘焙對決設定</h3>
+                    <div class="setup-options">
+                        <div class="option-group">
+                            <label>選擇對決主題：</label>
+                            <div class="option-buttons" id="battle-topic-select">
+                                <button class="opt-btn active" data-topic="add">➕ 分數加法</button>
+                                <button class="opt-btn" data-topic="sub">➖ 分數減法</button>
+                                <button class="opt-btn" data-topic="sub1">📏 1減分數</button>
+                                <button class="opt-btn" data-topic="mix">🌀 綜合大挑戰</button>
+                            </div>
+                        </div>
+                        <div class="option-group">
+                            <label>對決題數：</label>
+                            <div class="option-buttons" id="battle-count-select">
+                                <button class="opt-btn active" data-count="10">10 題</button>
+                                <button class="opt-btn" data-count="20">20 題</button>
+                                <button class="opt-btn" data-count="30">30 題</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-start-battle" class="start-game-btn battle">開啟雙人烘焙對決 ⚔️</button>
+                </div>
+                
+                <!-- 烘焙秘笈按鈕 -->
+                <div class="lobby-action-row" style="margin-top: 25px; display: flex; justify-content: center; gap: 15px;">
+                    <button id="btn-lobby-secret-guide" class="start-game-btn magic-guide-btn">📖 魔法烘培秘笈</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 單人遊玩畫面 ==================== -->
+        <section id="screen-single-play" class="screen">
+            <div class="game-layout">
+                <!-- 左側：題目與輸入算式 -->
+                <div class="game-panel left-panel">
+                    <div class="panel-header">
+                        <span class="level-indicator" id="single-level-title">第一關：魔法麵包拼拼樂</span>
+                        <div class="progress-bar-container">
+                            <div class="progress-fill" id="single-progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 題目區 -->
+                    <div class="question-box">
+                        <button class="repeat-audio-btn" id="btn-single-audio-repeat" title="重播題目語音">🔊</button>
+                        <p class="question-text" id="single-question-text">載入題目中...</p>
+                    </div>
+
+                    <!-- 算式作答與輸入區 -->
+                    <div class="workspace-area">
+                        <div class="equation-display" id="single-equation-display">
+                            <!-- 這裡會動態產生直式分數算式 -->
+                        </div>
+                        
+                        <div class="keyboard-area" id="single-keyboard">
+                            <!-- 動態產生的數字/分數鍵盤 -->
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="btn-single-submit" class="action-btn submit">送出答案 🔮</button>
+                        <button id="btn-single-next" class="action-btn next hidden">下一題 ➔</button>
+                        <button id="btn-single-back-lobby" class="action-btn exit">返回大廳 🚪</button>
+                    </div>
+                </div>
+
+                <!-- 右側：互動操縱區（動態視覺表徵） -->
+                <div class="game-panel right-panel interactive-board">
+                    <div class="board-title">🔮 魔法配料盤</div>
+                    <div class="board-content" id="single-interactive-content">
+                        <!-- 根據關卡動態渲染：圓餅圖/烤箱/離散量雞蛋盒/彩帶 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 雙人對決畫面 ==================== -->
+        <section id="screen-double-play" class="screen">
+            <div class="battle-layout">
+                <!-- 頂部對戰資訊 -->
+                <div class="battle-header">
+                    <div class="p1-score-tag">
+                        <span class="player-icon">🧁</span>
+                        <span class="player-name">玩家 1 (左邊)</span>
+                        <span class="score-num" id="p1-score">0 分</span>
+                    </div>
+                    <div class="battle-timer">
+                        <div class="timer-circle" id="battle-timer-display">30</div>
+                    </div>
+                    <div class="p2-score-tag">
+                        <span class="score-num" id="p2-score">0 分</span>
+                        <span class="player-name">玩家 2 (右邊)</span>
+                        <span class="player-icon">🍩</span>
+                    </div>
+                </div>
+
+                <!-- 雙人同屏：左右分流 -->
+                <div class="battle-workspace">
+                    <!-- 玩家 1 (左側) -->
+                    <div class="player-side" id="p1-side">
+                        <div class="side-indicator">玩家 1 區</div>
+                        <div class="battle-question-box">
+                            <p class="battle-question-text" id="p1-question">題目載入中...</p>
+                        </div>
+                        <div class="battle-equation-display" id="p1-equation">
+                            <!-- 玩家1的算式 -->
+                        </div>
+                        <div class="battle-interaction" id="p1-interaction">
+                            <!-- 玩家1的操作區 -->
+                        </div>
+                        <div class="battle-keyboard" id="p1-keyboard">
+                            <!-- 玩家1鍵盤 -->
+                        </div>
+                        <button class="battle-submit-btn" id="btn-p1-submit">送出 🧁</button>
+                        <div class="battle-feedback" id="p1-feedback"></div>
+                    </div>
+
+                    <!-- 中間分割條/特效區 -->
+                    <div class="battle-divider">VS</div>
+
+                    <!-- 玩家 2 (右側) -->
+                    <div class="player-side" id="p2-side">
+                        <div class="side-indicator">玩家 2 區</div>
+                        <div class="battle-question-box">
+                            <p class="battle-question-text" id="p2-question">題目載入中...</p>
+                        </div>
+                        <div class="battle-equation-display" id="p2-equation">
+                            <!-- 玩家2的算式 -->
+                        </div>
+                        <div class="battle-interaction" id="p2-interaction">
+                            <!-- 玩家2的操作區 -->
+                        </div>
+                        <div class="battle-keyboard" id="p2-keyboard">
+                            <!-- 玩家2鍵盤 -->
+                        </div>
+                        <button class="battle-submit-btn" id="btn-p2-submit">送出 🍩</button>
+                        <div class="battle-feedback" id="p2-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="battle-actions">
+                    <button id="btn-battle-back-lobby" class="action-btn exit">結束對決 🚪</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 結算與獎勵畫面 ==================== -->
+        <section id="screen-result" class="screen">
+            <div class="result-card">
+                <div class="result-icon-big" id="result-emoji">🏆</div>
+                <h2 class="result-title" id="result-title">修練成功！</h2>
+                <div class="result-stats" id="result-stats">
+                    <!-- 答題統計 -->
+                </div>
+                <button id="btn-result-ok" class="start-game-btn">返回烘焙屋大廳 🍰</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- 頁尾版權與設計者宣告 -->
+    <footer class="global-footer">
+        <div class="footer-slogan">🧁 快樂烘焙，分數加減真簡單！</div>
+        <div class="footer-info">
+            <span>本網站內容係參考康軒版國小三年級數學「分數的加減」單元。</span>
+            <span class="footer-separator">|</span>
+            <span>設計者：國立屏科實驗高級中等學校(國小部) 林敬修老師 與 Antigravity 共同創作</span>
+            <span class="footer-separator">|</span>
+            <span id="btn-footer-secret-guide" style="cursor: pointer; color: var(--accent-gold); text-decoration: underline; font-weight: bold;">📖 魔法烘培秘笈</span>
+        </div>
+    </footer>
+
+    <!-- ==================== 魔法烘培秘笈彈窗 ==================== -->
+    <div id="modal-secret-guide" class="modal-overlay">
+        <div class="modal-card-glass">
+            <header class="modal-header">
+                <div class="modal-title-wrap">
+                    <span class="modal-emoji">📖</span>
+                    <h3>分數魔法烘培秘笈</h3>
+                </div>
+                <button id="btn-close-guide" class="close-btn" title="關閉秘笈">✕</button>
+            </header>
+            <div class="modal-scroll-content">
+                
+                <section class="guide-section hero-note">
+                    <h4>🧙‍♂️ 烘焙大師的加減分數秘訣</h4>
+                    <p><strong>「分數的加減法，其實就是數一數有幾個小碎片喔！」</strong></p>
+                    <p>當我們把美味點心平分之後，每一片就變成一個小小的「分數碎片」。只要看清楚碎片底下的分母（切片大小），再把上面的分子（碎片個數）加起來或減掉，就能調配出正確的魔法材料包囉！</p>
+                </section>
+
+                <section class="guide-section">
+                    <div class="guide-subtitle">
+                        <span class="guide-icon">🔮</span>
+                        <h5>關卡一：魔法麵包拼拼樂 (和 1 一樣大)</h5>
+                    </div>
+                    <div class="guide-detail">
+                        <p><strong>🎂 把分數碎片拼回「1」個完整的點心：</strong></p>
+                        <p>如果把蛋糕平分成 6 份，當你拿走全部的 6 份，也就是拿到
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>6</span></span>
+                                <span class="den-row"><span>6</span></span>
+                            </span> 個蛋糕，這時候就剛好拼回「1」個完整、大大的蛋糕喔！
+                        </p>
+                        <p><strong>🥚 一盒雞蛋的裝箱魔法：</strong></p>
+                        <p>如果一盒雞蛋有 10 個，要拿滿整整 1 盒，就要拿走 10 個，寫成分數就是
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>10</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span> 盒！
+                        </p>
+                        <div class="tip-bubble">
+                            💡 <strong>烘焙大師悄悄話：</strong> 只要分數的<strong>上面（分子）和下面（分母）數字一樣大</strong>，這個分數就剛好等於整數<strong>「1」</strong>喔！
+                        </div>
+                    </div>
+                </section>
+
+                <section class="guide-section">
+                    <div class="guide-subtitle">
+                        <span class="guide-icon">🍞</span>
+                        <h5>關卡二：魔法吐司大烤爐 (分數的加法)</h5>
+                    </div>
+                    <div class="guide-detail">
+                        <p><strong>➕ 同分母相加，只有分子變多喔：</strong></p>
+                        <p>哥哥吃了
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>3</span></span>
+                                <span class="den-row"><span>8</span></span>
+                            </span> 個蛋糕，妹妹吃了
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>2</span></span>
+                                <span class="den-row"><span>8</span></span>
+                            </span> 個。他們吃的都是「八分之一」大小的碎片。
+                        </p>
+                        <p>加起來時，只要把碎片的個數加在一起（3 個加 2 個等於 5 個），所以是
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>5</span></span>
+                                <span class="den-row"><span>8</span></span>
+                            </span> 個蛋糕。
+                        </p>
+                        <p><strong>⚠️ 千萬要注意：</strong></p>
+                        <p>底下的<strong>分母（切片大小）不能相加</strong>喔！如果把 8 加 8 變成 16，蛋糕碎片就會縮小了！所以記得要「分母不變，只加分子」！</p>
+                        <div class="tip-bubble">
+                            💡 <strong>烘焙大師悄悄話：</strong> 如果加起來的分子和分母一樣大（例如
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>12</span></span>
+                                <span class="den-row"><span>12</span></span>
+                            </span>），別忘了它就是整整<strong>「1」</strong>個喔！
+                        </div>
+                    </div>
+                </section>
+
+                <section class="guide-section">
+                    <div class="guide-subtitle">
+                        <span class="guide-icon">🐭</span>
+                        <h5>關卡三：老鼠小偷的挑戰 (分數的減法)</h5>
+                    </div>
+                    <div class="guide-detail">
+                        <p><strong>➖ 同分母相減，分母也乖乖不動喔：</strong></p>
+                        <p>桌上有
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>6</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span> 塊大餅，被弟弟吃掉了
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>2</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span> 塊。
+                        </p>
+                        <p>剩下的大餅，就是用上面的分子相減（6 個減 2 個等於 4 個），所以剩下
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>4</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span> 塊！同樣的，底下的分母 10 不能相減，要保持一樣喔！
+                        </p>
+                        <p><strong>🍬 顆數換算成分數的小魔法：</strong></p>
+                        <p>如果一盒鉛筆有 12 枝，妹妹比弟弟少 2 枝，這少掉的 2 枝就是少掉
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>2</span></span>
+                                <span class="den-row"><span>12</span></span>
+                            </span> 盒！要先動動腦把「幾枝」換成「幾分之幾盒」才能算喔！
+                        </p>
+                        <div class="tip-bubble">
+                            💡 <strong>烘焙大師悄悄話：</strong> 打敗老鼠小偷的秘訣就是——看清剩下的碎片數量，用上面的分子直接減去吃掉的分子！
+                        </div>
+                    </div>
+                </section>
+
+                <section class="guide-section">
+                    <div class="guide-subtitle">
+                        <span class="guide-icon">🎀</span>
+                        <h5>關卡四：神奇彩帶裝飾秀 (1 減分數的減法)</h5>
+                    </div>
+                    <div class="guide-detail">
+                        <p><strong>✂️ 整數「1」的變身大魔法：</strong></p>
+                        <p>當我們要用「1」去減掉分數時，像是 1 -
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>7</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span>，該怎麼辦呢？
+                        </p>
+                        <p>別擔心！我們要先把整數「1」變身！因為要減的分數分母是 10，我們就把 1 變身成
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>10</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span>。
+                        </p>
+                        <p>算式就會變成：
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>10</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span> -
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>7</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span> =
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>3</span></span>
+                                <span class="den-row"><span>10</span></span>
+                            </span>，是不是超簡單呢！
+                        </p>
+                        <p><strong>🎀 看分母決定變身成誰：</strong></p>
+                        <p>如果遇到 1 -
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>3</span></span>
+                                <span class="den-row"><span>5</span></span>
+                            </span>，底下的分母是 5，就把 1 變身成
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>5</span></span>
+                                <span class="den-row"><span>5</span></span>
+                            </span>；如果是 1 -
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>3</span></span>
+                                <span class="den-row"><span>8</span></span>
+                            </span>，就變身成
+                            <span class="fraction inline-frac">
+                                <span class="num-row"><span>8</span></span>
+                                <span class="den-row"><span>8</span></span>
+                            </span>！
+                        </p>
+                        <div class="tip-bubble">
+                            💡 <strong>烘焙大師悄悄話：</strong> 1 就像一隻神奇的變色龍，看旁邊的分數分母是幾，它就變身成「幾分之幾」！
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            <footer class="modal-footer">
+                <button id="btn-close-guide-bottom" class="action-btn submit" style="margin: 0; max-width: 200px;">我明白了！</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- 載入邏輯腳本 -->
+    <script src="sound.js"></script>
+    <script src="tts.js"></script>
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
