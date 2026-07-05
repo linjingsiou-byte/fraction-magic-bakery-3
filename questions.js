@@ -30,7 +30,7 @@ const gameQuestions = {
             feedback: {
                 wrongNum: "分子的數量不對喔！要拿滿整盒，分子必須和分母10一樣大呢。",
                 wrongDen: "分母不對喔！一盒平分成10個，所以分母必須是10呢。",
-                misconception: "記得！當分子 and 分母一樣大時，分數就等於整數1呢。"
+                misconception: "記得！當分子和分母一樣大時，分數就等於整數1呢。"
             }
         },
         {
