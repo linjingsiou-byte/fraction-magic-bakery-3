@@ -1160,6 +1160,32 @@ button {
     transform: scale(0.95);
 }
 
+/* 按鈕內直式分數自適應縮放微調 */
+.tool-btn .fraction,
+.opt-btn .fraction {
+    display: inline-table;
+    vertical-align: middle;
+    margin: 0 4px;
+    line-height: 1;
+    font-size: 0.9rem;
+}
+
+.tool-btn .fraction .num-row span,
+.opt-btn .fraction .num-row span {
+    display: table-cell;
+    border-bottom: 2px solid currentColor;
+    padding: 0 3px 2px 3px;
+    font-size: 1em;
+}
+
+.tool-btn .fraction .den-row span,
+.opt-btn .fraction .den-row span {
+    display: table-cell;
+    padding: 2px 3px 0 3px;
+    font-size: 1em;
+}
+
+
 /* ==================== 雙人對戰版面 (Double Play) ==================== */
 .battle-layout {
     display: flex;

@@ -350,7 +350,8 @@ class MagicBakeryApp {
                 optBtn.className = 'opt-btnChoice opt-btn';
                 optBtn.style.width = '100%';
                 optBtn.style.maxWidth = '300px';
-                optBtn.innerText = opt;
+                optBtn.setAttribute('data-val', opt);
+                optBtn.innerHTML = this.formatMathText(opt);
                 
                 optBtn.addEventListener('click', () => {
                     soundEffects.playClick();
@@ -727,7 +728,7 @@ class MagicBakeryApp {
             inventory.className = 'drag-inventory';
             inventory.innerHTML = `
                 <button class="tool-btn" id="btn-add-slice">
-                    🍰 放入 1/${q.visual.totalSlices} 塊麵包
+                    ${this.formatMathText(`🍰 放入 1/${q.visual.totalSlices} 塊麵包`)}
                 </button>
                 <button class="tool-btn" id="btn-clear-slices" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
                     🗑️ 清空
@@ -819,7 +820,7 @@ class MagicBakeryApp {
             inventory.className = 'drag-inventory';
             inventory.innerHTML = `
                 <button class="tool-btn" id="btn-add-item">
-                    ${emoji} 放入 1/${q.visual.totalItems} 盒${name}
+                    ${this.formatMathText(`${emoji} 放入 1/${q.visual.totalItems} 盒${name}`)}
                 </button>
                 <button class="tool-btn" id="btn-clear-items" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
                     🗑️ 清空
@@ -1049,7 +1050,7 @@ class MagicBakeryApp {
         const unitName = q.visual.interactiveType.includes('discrete') ? '個' : '塊';
         toolArea.innerHTML = `
             <button class="tool-btn" id="btn-add-val">
-                ➕ 放入 1/${total} ${unitName}吐司
+                ${this.formatMathText(`➕ 放入 1/${total} ${unitName}吐司`)}
             </button>
             <button class="tool-btn" id="btn-reset-val" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
                 🗑️ 重設
@@ -1400,7 +1401,7 @@ class MagicBakeryApp {
                 ttsManager.speak("請先選一個答案呢。");
                 return;
             }
-            const selectedVal = activeOpt.innerText;
+            const selectedVal = activeOpt.getAttribute('data-val') || activeOpt.innerText.trim();
             if (selectedVal === q.answer) {
                 isCorrect = true;
             } else {
@@ -2024,14 +2025,10 @@ class MagicBakeryApp {
 
     // 將題目中的斜角分數 (如 3/8) 動態轉為 inline-table 直式分數 HTML 元件
     formatMathText(text) {
+        if (!text) return '';
         const fracRegex = /([\d\?]+)\/([\d\?]+)/g;
         return text.replace(fracRegex, (match, num, den) => {
-            return `
-                <span class="fraction">
-                    <span class="num-row"><span>${num}</span></span>
-                    <span class="den-row"><span>${den}</span></span>
-                </span>
-            `;
+            return `<span class="fraction"><span class="num-row"><span>${num}</span></span><span class="den-row"><span>${den}</span></span></span>`;
         });
     }
 }
