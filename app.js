@@ -52,6 +52,8 @@ class MagicBakeryApp {
         this.p2Answered = false;
         this.p1SubmitBtn = document.getElementById('btn-p1-submit');
         this.p2SubmitBtn = document.getElementById('btn-p2-submit');
+        this.battleThinkingTimer = null;
+        this.isBattleThinkingPhase = false;
     }
 
     start() {
@@ -527,6 +529,12 @@ class MagicBakeryApp {
         numCell.setAttribute('data-target', `${prefixId}-num`);
         numCell.innerText = '?';
         numCell.addEventListener('click', (e) => {
+            if ((isPlayer1 || isPlayer2) && this.isBattleThinkingPhase) {
+                soundEffects.playSoftClick();
+                this.triggerBattleSideShake(isPlayer1 ? 1 : 2);
+                e.stopPropagation();
+                return;
+            }
             soundEffects.playClick();
             e.stopPropagation();
             if (isPlayer1) {
@@ -550,6 +558,12 @@ class MagicBakeryApp {
         } else {
             denCell.innerText = '?';
             denCell.addEventListener('click', (e) => {
+                if ((isPlayer1 || isPlayer2) && this.isBattleThinkingPhase) {
+                    soundEffects.playSoftClick();
+                    this.triggerBattleSideShake(isPlayer1 ? 1 : 2);
+                    e.stopPropagation();
+                    return;
+                }
                 soundEffects.playClick();
                 e.stopPropagation();
                 if (isPlayer1) {
@@ -1704,7 +1718,100 @@ class MagicBakeryApp {
         this.p2SubmitBtn.onclick = () => this.submitPlayerAnswer(2);
     }
 
+    clearBattleThinkingTimer() {
+        if (this.battleThinkingTimer) {
+            clearInterval(this.battleThinkingTimer);
+            this.battleThinkingTimer = null;
+        }
+    }
+
+    startBattleThinkingCountdown(durationSec = 3.0) {
+        this.clearBattleThinkingTimer();
+        clearInterval(this.battleTimerInterval);
+
+        this.isBattleThinkingPhase = true;
+
+        const p1Side = document.getElementById('p1-side');
+        const p2Side = document.getElementById('p2-side');
+        if (p1Side) p1Side.classList.add('cooling');
+        if (p2Side) p2Side.classList.add('cooling');
+
+        const statusBar = document.getElementById('battle-status-bar');
+        const statusIcon = document.getElementById('battle-status-icon');
+        const statusText = document.getElementById('battle-status-text');
+        const progressFill = document.getElementById('battle-status-progress-fill');
+        const timerCircle = document.getElementById('battle-timer-display');
+
+        if (timerCircle) {
+            timerCircle.innerText = "⏳";
+            timerCircle.classList.remove('warning');
+        }
+
+        if (statusBar) {
+            statusBar.classList.remove('hidden', 'ready');
+            if (statusIcon) statusIcon.textContent = '⏳';
+            if (statusText) {
+                statusText.innerHTML = `仔細看題思考中... <strong id="battle-status-timer">${durationSec.toFixed(1)}</strong> 秒後開放作答！`;
+            }
+            if (progressFill) {
+                progressFill.style.transition = 'none';
+                progressFill.style.width = '0%';
+            }
+        }
+
+        const totalMs = durationSec * 1000;
+        const intervalMs = 100;
+        let elapsedMs = 0;
+
+        this.battleThinkingTimer = setInterval(() => {
+            elapsedMs += intervalMs;
+            const remainingSec = Math.max(0, (totalMs - elapsedMs) / 1000);
+            const percent = Math.min(100, (elapsedMs / totalMs) * 100);
+
+            const timerEl = document.getElementById('battle-status-timer');
+            if (timerEl) {
+                timerEl.textContent = remainingSec.toFixed(1);
+            }
+            if (progressFill) {
+                progressFill.style.transition = 'width 0.1s linear';
+                progressFill.style.width = `${percent}%`;
+            }
+
+            if (elapsedMs >= totalMs) {
+                this.clearBattleThinkingTimer();
+                this.onBattleThinkingComplete();
+            }
+        }, intervalMs);
+    }
+
+    onBattleThinkingComplete() {
+        this.isBattleThinkingPhase = false;
+
+        soundEffects.playBuzzerOpen();
+
+        const p1Side = document.getElementById('p1-side');
+        const p2Side = document.getElementById('p2-side');
+        if (p1Side) p1Side.classList.remove('cooling');
+        if (p2Side) p2Side.classList.remove('cooling');
+
+        const statusBar = document.getElementById('battle-status-bar');
+        const statusIcon = document.getElementById('battle-status-icon');
+        const statusText = document.getElementById('battle-status-text');
+
+        if (statusBar) {
+            statusBar.className = 'battle-status-bar ready';
+            if (statusIcon) statusIcon.textContent = '⚡';
+            if (statusText) {
+                statusText.innerHTML = '⚡ <strong>競速開始！</strong>快動手計算並填寫答案送出！';
+            }
+        }
+
+        // 正式啟動作答倒數
+        this.startBattleTimer();
+    }
+
     loadBattleQuestion() {
+        this.clearBattleThinkingTimer();
         const q = this.battleQuestions[this.battleCurrentQuestionIdx];
         this.battleTimerVal = this.battleTimeLimit;
         this.p1Answered = false;
@@ -1728,8 +1835,8 @@ class MagicBakeryApp {
         this.renderPlayerInteraction(1, q);
         this.renderPlayerInteraction(2, q);
 
-        // 重啟計時器
-        this.startBattleTimer();
+        // 啟動 3 秒讀題思考倒數
+        this.startBattleThinkingCountdown(3.0);
     }
 
     renderPlayerWorkspace(playerNum, q) {
@@ -1788,6 +1895,11 @@ class MagicBakeryApp {
 
         // 渲染各自鍵盤
         this.renderKeyboard(keyboardContainer, (val) => {
+            if (this.isBattleThinkingPhase) {
+                soundEffects.playSoftClick();
+                this.triggerBattleSideShake(playerNum);
+                return;
+            }
             let activeCell = playerNum === 1 ? this.p1ActiveInputCell : this.p2ActiveInputCell;
             if (!activeCell) return;
 
@@ -1893,7 +2005,32 @@ class MagicBakeryApp {
         }, 1000);
     }
 
+    triggerBattleSideShake(playerNum) {
+        const sideEl = document.getElementById(`p${playerNum}-side`);
+        if (sideEl) {
+            sideEl.classList.remove('shake-warn');
+            void sideEl.offsetWidth; // 強制重繪觸發動畫
+            sideEl.classList.add('shake-warn');
+        }
+        const feedbackEl = document.getElementById(`p${playerNum}-feedback`);
+        if (feedbackEl) {
+            feedbackEl.innerText = "👀 請先看題思考喔！倒數結束後才能開始作答！";
+            feedbackEl.className = "battle-feedback wrong";
+            setTimeout(() => {
+                if (this.isBattleThinkingPhase && feedbackEl.innerText.includes("請先看題思考")) {
+                    feedbackEl.innerText = "";
+                }
+            }, 1800);
+        }
+    }
+
     submitPlayerAnswer(playerNum) {
+        if (this.isBattleThinkingPhase) {
+            soundEffects.playSoftClick();
+            this.triggerBattleSideShake(playerNum);
+            return;
+        }
+
         if (playerNum === 1 && this.p1Answered) return;
         if (playerNum === 2 && this.p2Answered) return;
 
@@ -1981,6 +2118,7 @@ class MagicBakeryApp {
     }
 
     nextBattleQuestion() {
+        this.clearBattleThinkingTimer();
         this.battleCurrentQuestionIdx++;
         if (this.battleCurrentQuestionIdx < this.battleQuestions.length) {
             this.loadBattleQuestion();
@@ -1990,7 +2128,14 @@ class MagicBakeryApp {
     }
 
     endBattle() {
+        this.clearBattleThinkingTimer();
         clearInterval(this.battleTimerInterval);
+        const p1Side = document.getElementById('p1-side');
+        const p2Side = document.getElementById('p2-side');
+        if (p1Side) p1Side.classList.remove('cooling', 'shake-warn');
+        if (p2Side) p2Side.classList.remove('cooling', 'shake-warn');
+        const statusBar = document.getElementById('battle-status-bar');
+        if (statusBar) statusBar.classList.add('hidden');
     }
 
     finishBattle() {

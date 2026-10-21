@@ -1268,6 +1268,119 @@ button {
     to { transform: scale(1.1); }
 }
 
+/* 對戰讀題思考與狀態列 (方案 A 標準化) */
+.battle-status-bar {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(255, 248, 231, 0.95) 0%, rgba(255, 243, 224, 0.95) 100%);
+    border: 2px solid var(--accent-gold);
+    border-radius: 14px;
+    padding: 8px 16px;
+    margin: 8px 0;
+    box-shadow: 0 4px 12px rgba(255, 184, 0, 0.2);
+    animation: slide-down-bar 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.battle-status-bar.hidden {
+    display: none !important;
+}
+
+@keyframes slide-down-bar {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.battle-status-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.battle-status-icon {
+    font-size: 1.35rem;
+    animation: float-icon 1s infinite alternate ease-in-out;
+}
+
+@keyframes float-icon {
+    from { transform: translateY(-2px); }
+    to { transform: translateY(2px); }
+}
+
+.battle-status-text {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #5D4037;
+}
+
+.battle-status-text strong {
+    color: #E65100;
+    font-size: 1.25rem;
+    font-family: var(--font-heading);
+    display: inline-block;
+    min-width: 32px;
+    text-align: center;
+}
+
+.battle-status-progress {
+    width: 100%;
+    height: 6px;
+    background: rgba(141, 110, 99, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.battle-status-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #FFB800, #FF7EBB);
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+/* 狀態變化：開放作答 (Ready) */
+.battle-status-bar.ready {
+    border-color: #00E676;
+    background: linear-gradient(135deg, rgba(232, 245, 233, 0.95) 0%, rgba(200, 230, 201, 0.95) 100%);
+    box-shadow: 0 0 16px rgba(0, 230, 118, 0.35);
+}
+
+.battle-status-bar.ready .battle-status-text {
+    color: #1B5E20;
+}
+
+.battle-status-bar.ready .battle-status-progress-fill {
+    background: #00E676;
+}
+
+/* 冷卻期間玩家側面板鎖定樣式 (Thinking Phase) */
+.player-side.cooling .battle-keyboard,
+.player-side.cooling .battle-submit-btn,
+.player-side.cooling .battle-equation-display {
+    pointer-events: none;
+    filter: grayscale(0.4);
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.player-side.cooling .battle-submit-btn {
+    background-color: #8D6E63 !important;
+    box-shadow: none !important;
+}
+
+/* 思考期間偷按震動警示 */
+.shake-warn {
+    animation: shake-element 0.35s ease-in-out !important;
+}
+
+@keyframes shake-element {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
 .battle-workspace {
     flex: 1;
     display: grid;
