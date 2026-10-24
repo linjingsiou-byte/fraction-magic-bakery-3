@@ -20,8 +20,10 @@ class MagicBakeryApp {
         // 模式切換按鈕
         this.btnSingle = document.getElementById('btn-mode-single');
         this.btnDouble = document.getElementById('btn-mode-double');
+        this.btnAi = document.getElementById('btn-mode-ai');
         this.singleMap = document.getElementById('single-map-area');
         this.doubleSetup = document.getElementById('double-setup-area');
+        this.aiSetup = document.getElementById('ai-setup-area');
         
         // 語音按鈕
         this.btnTts = document.getElementById('btn-tts-toggle');
@@ -30,6 +32,7 @@ class MagicBakeryApp {
         this.screenLobby = document.getElementById('screen-lobby');
         this.screenSinglePlay = document.getElementById('screen-single-play');
         this.screenDoublePlay = document.getElementById('screen-double-play');
+        this.screenAiPlay = document.getElementById('screen-ai-play');
         this.screenResult = document.getElementById('screen-result');
         
         // 單人遊玩狀態
@@ -54,6 +57,26 @@ class MagicBakeryApp {
         this.p2SubmitBtn = document.getElementById('btn-p2-submit');
         this.battleThinkingTimer = null;
         this.isBattleThinkingPhase = false;
+
+        // 單人 AI 挑戰賽（魔力烤箱充能賽）狀態
+        this.aiDifficulty = 'normal'; // 'easy' | 'normal' | 'hard'
+        this.aiTopic = 'mix'; // 'mix' | 'add' | 'sub' | 'sub1'
+        this.playerEnergy = 0; // 0 - 100
+        this.aiEnergy = 0; // 0 - 100
+        this.playerCombo = 0;
+        this.maxPlayerCombo = 0;
+        this.aiQuestions = [];
+        this.aiCurrentQuestionIdx = 0;
+        this.aiActiveInputCell = null;
+        this.aiThinkingTimeout = null;
+        this.aiThinkingInterval = null;
+        this.aiIsPaused = false;
+        this.aiThinkingTotalMs = 9000;
+        this.aiThinkingElapsedMs = 0;
+        this.aiGameStartTime = 0;
+        this.aiCorrectCount = 0;
+        this.aiTotalAnswered = 0;
+        this.isAiGameActive = false;
     }
 
     start() {
@@ -104,6 +127,9 @@ class MagicBakeryApp {
         // 模式切換
         this.btnSingle.addEventListener('click', () => this.switchMode('single'));
         this.btnDouble.addEventListener('click', () => this.switchMode('double'));
+        if (this.btnAi) {
+            this.btnAi.addEventListener('click', () => this.switchMode('ai'));
+        }
 
         // 語音切換
         this.btnTts.addEventListener('click', () => {
@@ -192,6 +218,73 @@ class MagicBakeryApp {
             });
         });
 
+        // AI 挑戰賽難度選擇
+        document.querySelectorAll('#ai-difficulty-select .ai-diff-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                soundEffects.playClick();
+                document.querySelectorAll('#ai-difficulty-select .ai-diff-card').forEach(c => c.classList.remove('active'));
+                const currentCard = e.currentTarget;
+                currentCard.classList.add('active');
+                this.aiDifficulty = currentCard.getAttribute('data-diff');
+                const diffName = currentCard.querySelector('.diff-title').innerText;
+                ttsManager.speak(`切換難度為：${diffName}`);
+            });
+        });
+
+        // AI 挑戰賽主題選擇
+        document.querySelectorAll('#ai-topic-select .opt-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                soundEffects.playClick();
+                document.querySelectorAll('#ai-topic-select .opt-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.aiTopic = e.target.getAttribute('data-topic');
+            });
+        });
+
+        // AI 挑戰賽開始按鈕
+        const btnStartAi = document.getElementById('btn-start-ai');
+        if (btnStartAi) {
+            btnStartAi.addEventListener('click', () => {
+                soundEffects.playClick();
+                this.startAiChallenge();
+            });
+        }
+
+        // AI 挑戰賽作答送出按鈕
+        const btnAiSubmit = document.getElementById('btn-ai-submit');
+        if (btnAiSubmit) {
+            btnAiSubmit.addEventListener('click', () => {
+                this.submitAiAnswer();
+            });
+        }
+
+        // AI 挑戰賽下一題按鈕
+        const btnAiNext = document.getElementById('btn-ai-next');
+        if (btnAiNext) {
+            btnAiNext.addEventListener('click', () => {
+                soundEffects.playClick();
+                this.nextAiQuestion();
+            });
+        }
+
+        // AI 挑戰賽重播語音
+        const btnAiAudioRepeat = document.getElementById('btn-ai-audio-repeat');
+        if (btnAiAudioRepeat) {
+            btnAiAudioRepeat.addEventListener('click', () => {
+                this.repeatAiAudio();
+            });
+        }
+
+        // AI 挑戰賽返回大廳
+        const btnAiBackLobby = document.getElementById('btn-ai-back-lobby');
+        if (btnAiBackLobby) {
+            btnAiBackLobby.addEventListener('click', () => {
+                soundEffects.playClick();
+                this.cleanupAiChallenge();
+                this.showScreen('screen-lobby');
+            });
+        }
+
         // 結算畫面確認按鈕
         document.getElementById('btn-result-ok').addEventListener('click', () => {
             soundEffects.playClick();
@@ -206,6 +299,25 @@ class MagicBakeryApp {
         document.getElementById('btn-footer-secret-guide').addEventListener('click', openGuide);
         document.getElementById('btn-close-guide').addEventListener('click', closeGuide);
         document.getElementById('btn-close-guide-bottom').addEventListener('click', closeGuide);
+
+        // 實體鍵盤監聽支援 (支援單人與 AI 挑戰賽)
+        window.addEventListener('keydown', (e) => {
+            if (this.activeScreen === 'screen-ai-play') {
+                if (e.key >= '0' && e.key <= '9') {
+                    this.handleAiKeyboardInput(e.key);
+                } else if (e.key === 'Backspace') {
+                    this.handleAiKeyboardInput('清除');
+                } else if (e.key === 'Enter') {
+                    const nextBtn = document.getElementById('btn-ai-next');
+                    if (nextBtn && !nextBtn.classList.contains('hidden')) {
+                        soundEffects.playClick();
+                        this.nextAiQuestion();
+                    } else {
+                        this.submitAiAnswer();
+                    }
+                }
+            }
+        });
     }
 
     // ==================== 畫面切換與模式 ====================
@@ -214,18 +326,20 @@ class MagicBakeryApp {
         soundEffects.playClick();
         
         this.currentMode = mode;
+        this.btnSingle.classList.toggle('active', mode === 'single');
+        this.btnDouble.classList.toggle('active', mode === 'double');
+        if (this.btnAi) this.btnAi.classList.toggle('active', mode === 'ai');
+
+        this.singleMap.classList.toggle('hidden', mode !== 'single');
+        this.doubleSetup.classList.toggle('hidden', mode !== 'double');
+        if (this.aiSetup) this.aiSetup.classList.toggle('hidden', mode !== 'ai');
+
         if (mode === 'single') {
-            this.btnSingle.classList.add('active');
-            this.btnDouble.classList.remove('active');
-            this.singleMap.classList.remove('hidden');
-            this.doubleSetup.classList.add('hidden');
             ttsManager.speak("開啟單人自主學習模式，跟著關卡一起修練吧呢。");
-        } else {
-            this.btnSingle.classList.remove('active');
-            this.btnDouble.classList.add('active');
-            this.singleMap.classList.add('hidden');
-            this.doubleSetup.classList.remove('hidden');
+        } else if (mode === 'double') {
             ttsManager.speak("開啟雙人烘焙對決，和你的夥伴一起同屏競技吧呢。");
+        } else if (mode === 'ai') {
+            ttsManager.speak("開啟單人 AI 挑戰賽！與煉金貓頭鷹大師比拼魔力烤箱充能吧！");
         }
     }
 
@@ -233,10 +347,11 @@ class MagicBakeryApp {
         this.screenLobby.classList.remove('active');
         this.screenSinglePlay.classList.remove('active');
         this.screenDoublePlay.classList.remove('active');
+        if (this.screenAiPlay) this.screenAiPlay.classList.remove('active');
         this.screenResult.classList.remove('active');
 
         const screen = document.getElementById(screenId);
-        screen.classList.add('active');
+        if (screen) screen.classList.add('active');
         this.activeScreen = screenId;
     }
 
@@ -523,6 +638,7 @@ class MagicBakeryApp {
 
         const isPlayer1 = prefixId.startsWith('p1');
         const isPlayer2 = prefixId.startsWith('p2');
+        const isAi = prefixId.startsWith('ai');
 
         const numCell = document.createElement('div');
         numCell.className = 'frac-input-num';
@@ -541,6 +657,8 @@ class MagicBakeryApp {
                 this.activatePlayerInputCell(1, numCell);
             } else if (isPlayer2) {
                 this.activatePlayerInputCell(2, numCell);
+            } else if (isAi) {
+                this.activateAiInputCell(numCell);
             } else {
                 this.activateInputCell(numCell);
             }
@@ -570,6 +688,8 @@ class MagicBakeryApp {
                     this.activatePlayerInputCell(1, denCell);
                 } else if (isPlayer2) {
                     this.activatePlayerInputCell(2, denCell);
+                } else if (isAi) {
+                    this.activateAiInputCell(denCell);
                 } else {
                     this.activateInputCell(denCell);
                 }
@@ -592,6 +712,7 @@ class MagicBakeryApp {
         
         const isPlayer1 = id.startsWith('p1');
         const isPlayer2 = id.startsWith('p2');
+        const isAi = id.startsWith('ai');
 
         cell.addEventListener('click', (e) => {
             soundEffects.playClick();
@@ -600,6 +721,8 @@ class MagicBakeryApp {
                 this.activatePlayerInputCell(1, cell);
             } else if (isPlayer2) {
                 this.activatePlayerInputCell(2, cell);
+            } else if (isAi) {
+                this.activateAiInputCell(cell);
             } else {
                 this.activateInputCell(cell);
             }
@@ -714,11 +837,13 @@ class MagicBakeryApp {
     }
 
     // ==================== 渲染與更新視覺互動區 ====================
-    renderSingleInteraction(q) {
-        const container = document.getElementById('single-interactive-content');
+    renderSingleInteraction(q, containerId = 'single-interactive-content') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
         container.innerHTML = '';
 
         const type = q.visual.interactiveType;
+        const prefix = containerId.startsWith('ai') ? 'ai' : 'single';
 
         // 1. 第一關：圓形魔法盤 (和 1 一樣大)
         if (type === 'pie') {
@@ -734,7 +859,7 @@ class MagicBakeryApp {
             const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svg.setAttribute('class', 'magic-circle-svg');
             svg.setAttribute('viewBox', '0 0 200 200');
-            svg.id = 'magic-pie-svg';
+            svg.id = `${prefix}-magic-pie-svg`;
             wrapper.appendChild(svg);
 
             // 右下角追加按鈕
@@ -758,8 +883,8 @@ class MagicBakeryApp {
                 this.drawPieSvg(svg, q.visual.totalSlices, this.currentPieSlicesCount);
                 
                 // 動態同步輸入框
-                const numEl = document.querySelector('[data-target="single-f1-num"]');
-                const denEl = document.querySelector('[data-target="single-f1-den"]');
+                const numEl = document.querySelector(`[data-target="${prefix}-f1-num"]`);
+                const denEl = document.querySelector(`[data-target="${prefix}-f1-den"]`);
                 if (numEl && !numEl.classList.contains('selected') && this.currentPieSlicesCount > 0) {
                     numEl.innerText = this.currentPieSlicesCount;
                 }
@@ -866,8 +991,8 @@ class MagicBakeryApp {
                 }
 
                 // 同步更新分子/分母輸入框 (學童未點選輸入格時自動更新)
-                const numEl = document.querySelector('[data-target="single-f1-num"]');
-                const denEl = document.querySelector('[data-target="single-f1-den"]');
+                const numEl = document.querySelector(`[data-target="${prefix}-f1-num"]`);
+                const denEl = document.querySelector(`[data-target="${prefix}-f1-den"]`);
                 if (numEl && !numEl.classList.contains('selected') && this.currentDiscreteCount > 0) {
                     numEl.innerText = this.currentDiscreteCount;
                 }
@@ -2168,12 +2293,765 @@ class MagicBakeryApp {
         this.showScreen('screen-result');
     }
 
-    // 將題目中的斜角分數 (如 3/8) 動態轉為 inline-table 直式分數 HTML 元件
+    // 将題目中的斜角分數 (如 3/8) 動態轉為 inline-table 直式分數 HTML 元件
     formatMathText(text) {
         if (!text) return '';
         const fracRegex = /([\d\?]+)\/([\d\?]+)/g;
         return text.replace(fracRegex, (match, num, den) => {
             return `<span class="fraction"><span class="num-row"><span>${num}</span></span><span class="den-row"><span>${den}</span></span></span>`;
         });
+    }
+
+    // ==========================================================
+    // ==================== 單人 AI 挑戰賽模式 ==================
+    // ==========================================================
+
+    startAiChallenge() {
+        this.cleanupAiChallenge();
+
+        // 依難度設定參數
+        const diffConfigs = {
+            easy: {
+                diffLabel: '⭐ 見習學徒',
+                roleTitle: '🦉 見習烘焙學徒',
+                minMs: 12000,
+                maxMs: 15000,
+                accuracy: 0.75
+            },
+            normal: {
+                diffLabel: '⭐⭐ 熟練師傅',
+                roleTitle: '🦉 熟練甜點師傅',
+                minMs: 8000,
+                maxMs: 10000,
+                accuracy: 0.90
+            },
+            hard: {
+                diffLabel: '⭐⭐⭐ 挑戰',
+                roleTitle: '🦉 傳奇皇家主廚',
+                minMs: 4500,
+                maxMs: 6500,
+                accuracy: 1.00
+            }
+        };
+
+        const config = diffConfigs[this.aiDifficulty] || diffConfigs.normal;
+
+        // 更新對手頭銜與難度標籤
+        const aiDisplayDiff = document.getElementById('ai-display-diff');
+        const aiDisplayName = document.getElementById('ai-display-name');
+        if (aiDisplayDiff) aiDisplayDiff.innerText = config.diffLabel;
+        if (aiDisplayName) aiDisplayName.innerText = config.roleTitle;
+
+        // 重設能量與狀態
+        this.playerEnergy = 0;
+        this.aiEnergy = 0;
+        this.playerCombo = 0;
+        this.maxPlayerCombo = 0;
+        this.aiCurrentQuestionIdx = 0;
+        this.aiCorrectCount = 0;
+        this.aiTotalAnswered = 0;
+        this.aiIsPaused = false;
+        this.isAiGameActive = true;
+        this.aiGameStartTime = Date.now();
+
+        // 抽取題目 (30 題隨機題庫)
+        this.aiQuestions = getRandomBattleQuestions(this.aiTopic, 30);
+
+        // 重設 UI
+        this.updateAiDashboardUI();
+        const comboBadge = document.getElementById('player-combo-badge');
+        if (comboBadge) comboBadge.classList.add('hidden');
+
+        const safetyHint = document.getElementById('ai-safety-hint');
+        if (safetyHint) safetyHint.classList.add('hidden');
+
+        const critLayer = document.getElementById('ai-critical-layer');
+        if (critLayer) critLayer.classList.add('hidden');
+
+        const feedbackBar = document.getElementById('ai-feedback-bar');
+        if (feedbackBar) feedbackBar.classList.add('hidden');
+
+        const aiStatusBubble = document.getElementById('ai-status-bubble');
+        if (aiStatusBubble) aiStatusBubble.innerText = '🦉 調配配方中...';
+
+        this.showScreen('screen-ai-play');
+
+        // 開場語音
+        ttsManager.speak(`魔力烤箱充能對決開始！對手是${config.roleTitle}，先集滿百分之百出爐就能獲勝呢！`);
+
+        this.loadAiQuestion();
+        this.startAiThinkingCycle();
+    }
+
+    updateAiDashboardUI() {
+        // 玩家星光烤爐
+        const pPct = document.getElementById('player-charge-pct');
+        const pFill = document.getElementById('player-charge-fill');
+        const pStatus = document.getElementById('player-oven-status');
+        if (pPct) pPct.innerText = `${this.playerEnergy}%`;
+        if (pFill) pFill.style.width = `${this.playerEnergy}%`;
+        if (pStatus) {
+            pStatus.innerText = this.playerEnergy >= 100 
+                ? '🎉 充能完成！美味出爐！' 
+                : `持續充能中... (${this.playerEnergy}% / 100%)`;
+        }
+
+        // 貓頭鷹月光烤爐
+        const aiPct = document.getElementById('ai-charge-pct');
+        const aiFill = document.getElementById('ai-charge-fill');
+        if (aiPct) aiPct.innerText = `${this.aiEnergy}%`;
+        if (aiFill) aiFill.style.width = `${this.aiEnergy}%`;
+    }
+
+    loadAiQuestion() {
+        if (!this.aiQuestions || this.aiQuestions.length === 0) return;
+        const q = this.aiQuestions[this.aiCurrentQuestionIdx % this.aiQuestions.length];
+
+        // 更新指示與進度條
+        const indicator = document.getElementById('ai-question-indicator');
+        if (indicator) {
+            indicator.innerText = `第 ${this.aiCurrentQuestionIdx + 1} 題：充能原料調配`;
+        }
+        const roundFill = document.getElementById('ai-round-progress');
+        if (roundFill) {
+            const pct = Math.min(100, ((this.aiCurrentQuestionIdx + 1) / 10) * 100);
+            roundFill.style.width = `${pct}%`;
+        }
+
+        // 題目文字 (直式分數格式化)
+        const qTextEl = document.getElementById('ai-question-text');
+        if (qTextEl) {
+            qTextEl.innerHTML = this.formatMathText(q.text);
+        }
+
+        // 語音報讀
+        ttsManager.speak(q.text);
+
+        // 重設按鈕與回饋提示
+        const btnSubmit = document.getElementById('btn-ai-submit');
+        const btnNext = document.getElementById('btn-ai-next');
+        const feedbackBar = document.getElementById('ai-feedback-bar');
+        if (btnSubmit) btnSubmit.classList.remove('hidden');
+        if (btnNext) btnNext.classList.add('hidden');
+        if (feedbackBar) feedbackBar.classList.add('hidden');
+
+        // 渲染作答區與互動操作區
+        this.renderAiWorkspace(q);
+        this.renderSingleInteraction(q, 'ai-interactive-content');
+    }
+
+    repeatAiAudio() {
+        if (!this.isAiGameActive) return;
+        soundEffects.playClick();
+        const q = this.aiQuestions[this.aiCurrentQuestionIdx % this.aiQuestions.length];
+        if (q) ttsManager.speak(q.text);
+    }
+
+    renderAiWorkspace(q) {
+        const display = document.getElementById('ai-equation-display');
+        const keyboardArea = document.getElementById('ai-keyboard');
+        if (!display) return;
+        display.innerHTML = '';
+        this.aiActiveInputCell = null;
+
+        // 1. 選擇題模式
+        if (q.type === 'choice') {
+            if (keyboardArea) keyboardArea.innerHTML = '';
+            display.style.flexDirection = 'column';
+            display.style.gap = '12px';
+
+            q.options.forEach(opt => {
+                const optBtn = document.createElement('button');
+                optBtn.className = 'opt-btnChoice';
+                optBtn.innerHTML = this.formatMathText(opt);
+                optBtn.setAttribute('data-val', opt);
+                
+                optBtn.addEventListener('click', () => {
+                    soundEffects.playClick();
+                    display.querySelectorAll('.opt-btnChoice').forEach(b => b.classList.remove('active'));
+                    optBtn.classList.add('active');
+                });
+                display.appendChild(optBtn);
+            });
+            return;
+        }
+
+        // 2. 直式算式輸入模式
+        display.style.flexDirection = 'row';
+        display.style.gap = '8px';
+
+        if (q.type === 'fraction-input') {
+            display.appendChild(this.createFracInputBox('ai-f1'));
+        } else if (q.type === 'equation') {
+            display.appendChild(this.createStaticFrac(q.answer.num1, q.answer.den1));
+            const symbol = document.createElement('span');
+            symbol.className = 'symbol';
+            symbol.innerText = q.initialEq.includes('+') ? '+' : '-';
+            display.appendChild(symbol);
+            display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
+            const eqSymbol = document.createElement('span');
+            eqSymbol.className = 'symbol';
+            eqSymbol.innerText = '=';
+            display.appendChild(eqSymbol);
+            display.appendChild(this.createFracInputBox('ai-fans'));
+        } else if (q.type === 'equation-whole') {
+            display.appendChild(this.createStaticFrac(q.answer.num1, q.answer.den1));
+            const symbol = document.createElement('span');
+            symbol.className = 'symbol';
+            symbol.innerText = '+';
+            display.appendChild(symbol);
+            display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
+            const eqSymbol = document.createElement('span');
+            eqSymbol.className = 'symbol';
+            eqSymbol.innerText = '=';
+            display.appendChild(eqSymbol);
+            display.appendChild(this.createFracInputBox('ai-fans'));
+            const eqSymbol2 = document.createElement('span');
+            eqSymbol2.className = 'symbol';
+            eqSymbol2.innerText = '=';
+            display.appendChild(eqSymbol2);
+            display.appendChild(this.createWholeInputBox('ai-wholeans'));
+        } else if (q.type === 'equation-convert') {
+            display.appendChild(this.createStaticFrac(q.answer.num1, q.answer.den1));
+            const symbol = document.createElement('span');
+            symbol.className = 'symbol';
+            symbol.innerText = '-';
+            display.appendChild(symbol);
+            display.appendChild(this.createFracInputBox('ai-f2', q.answer.den2));
+            const eqSymbol = document.createElement('span');
+            eqSymbol.className = 'symbol';
+            eqSymbol.innerText = '=';
+            display.appendChild(eqSymbol);
+            display.appendChild(this.createFracInputBox('ai-fans'));
+        } else if (q.type === 'equation-whole-sub') {
+            const wholeSymbol = document.createElement('span');
+            wholeSymbol.className = 'symbol';
+            wholeSymbol.innerText = '1';
+            display.appendChild(wholeSymbol);
+            const symbol = document.createElement('span');
+            symbol.className = 'symbol';
+            symbol.innerText = '-';
+            display.appendChild(symbol);
+            display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
+            const eqSymbol = document.createElement('span');
+            eqSymbol.className = 'symbol';
+            eqSymbol.innerText = '=';
+            display.appendChild(eqSymbol);
+            display.appendChild(this.createFracInputBox('ai-f1'));
+            const symbol2 = document.createElement('span');
+            symbol2.className = 'symbol';
+            symbol2.innerText = '-';
+            display.appendChild(symbol2);
+            display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
+            const eqSymbol2 = document.createElement('span');
+            eqSymbol2.className = 'symbol';
+            eqSymbol2.innerText = '=';
+            display.appendChild(eqSymbol2);
+            display.appendChild(this.createFracInputBox('ai-fans'));
+        } else if (q.type === 'equation-add-to-whole') {
+            display.appendChild(this.createStaticFrac(q.answer.num1, q.answer.den1));
+            const symbol = document.createElement('span');
+            symbol.className = 'symbol';
+            symbol.innerText = '+';
+            display.appendChild(symbol);
+            display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
+            const eqSymbol = document.createElement('span');
+            eqSymbol.className = 'symbol';
+            eqSymbol.innerText = '=';
+            display.appendChild(eqSymbol);
+            display.appendChild(this.createFracInputBox('ai-fans'));
+            const eqSymbol2 = document.createElement('span');
+            eqSymbol2.className = 'symbol';
+            eqSymbol2.innerText = '=';
+            display.appendChild(eqSymbol2);
+            display.appendChild(this.createWholeInputBox('ai-wholeans'));
+        }
+
+        // 渲染虛擬鍵盤
+        if (keyboardArea) {
+            this.renderKeyboard('ai-keyboard', (val) => this.handleAiKeyboardInput(val));
+        }
+
+        // 預設高亮第一個未填寫輸入格
+        const firstInput = display.querySelector('.frac-input-num, .frac-input-den, .whole-input-box');
+        if (firstInput) {
+            this.activateAiInputCell(firstInput);
+        }
+    }
+
+    activateAiInputCell(cell) {
+        if (!cell || cell.classList.contains('static-default')) return;
+
+        document.querySelectorAll('#ai-equation-display .frac-input-num, #ai-equation-display .frac-input-den, #ai-equation-display .whole-input-box, #ai-equation-display .frac-input-box').forEach(el => {
+            el.classList.remove('selected', 'active');
+        });
+
+        this.aiActiveInputCell = cell;
+        cell.classList.add('selected');
+
+        const parentBox = cell.closest('.frac-input-box');
+        if (parentBox) parentBox.classList.add('active');
+    }
+
+    handleAiKeyboardInput(val) {
+        if (!this.aiActiveInputCell) return;
+
+        if (val === '清除') {
+            this.aiActiveInputCell.innerText = '?';
+            this.syncAiVisualFromInputs();
+        } else if (val === '確認') {
+            this.autoAdvanceAiInputFocus();
+        } else {
+            const currentVal = this.aiActiveInputCell.innerText;
+            if (currentVal === '?' || currentVal === '0') {
+                this.aiActiveInputCell.innerText = val;
+            } else if (currentVal.length < 2) {
+                this.aiActiveInputCell.innerText = currentVal + val;
+            }
+            this.syncAiVisualFromInputs();
+        }
+    }
+
+    autoAdvanceAiInputFocus() {
+        const inputs = Array.from(document.querySelectorAll('#ai-equation-display .frac-input-num, #ai-equation-display .frac-input-den, #ai-equation-display .whole-input-box'));
+        const currentIdx = inputs.indexOf(this.aiActiveInputCell);
+
+        for (let i = 1; i <= inputs.length; i++) {
+            const nextCell = inputs[(currentIdx + i) % inputs.length];
+            if (!nextCell.classList.contains('static-default') && nextCell.innerText === '?') {
+                this.activateAiInputCell(nextCell);
+                return;
+            }
+        }
+    }
+
+    syncAiVisualFromInputs() {
+        const q = this.aiQuestions[this.aiCurrentQuestionIdx % this.aiQuestions.length];
+        if (!q || !q.visual) return;
+
+        const numEl = document.querySelector('[data-target="ai-fans-num"]') || document.querySelector('[data-target="ai-f1-num"]');
+        const denEl = document.querySelector('[data-target="ai-fans-den"]') || document.querySelector('[data-target="ai-f1-den"]');
+        
+        let numVal = parseInt(numEl && numEl.innerText !== '?' ? numEl.innerText : 0);
+        let denVal = parseInt(denEl && denEl.innerText !== '?' ? denEl.innerText : (q.visual.totalSlices || q.visual.totalItems || 8));
+
+        if (isNaN(numVal)) numVal = 0;
+        if (isNaN(denVal) || denVal <= 0) denVal = q.visual.totalSlices || q.visual.totalItems || 8;
+
+        const svg = document.getElementById('ai-magic-pie-svg');
+        if (svg && q.visual.interactiveType === 'pie') {
+            this.drawPieSvg(svg, denVal, numVal);
+        }
+    }
+
+    submitAiAnswer() {
+        if (!this.isAiGameActive) return;
+        const q = this.aiQuestions[this.aiCurrentQuestionIdx % this.aiQuestions.length];
+        let isCorrect = false;
+        let misconceptionMsg = "";
+
+        // 1. 選擇題檢驗
+        if (q.type === 'choice') {
+            const activeOpt = document.querySelector('#ai-equation-display .opt-btnChoice.active');
+            if (!activeOpt) {
+                soundEffects.playWrong();
+                ttsManager.speak("請先點選一個答案選項呢。");
+                return;
+            }
+            const selectedVal = activeOpt.getAttribute('data-val') || activeOpt.innerText.trim();
+            if (selectedVal === q.answer) {
+                isCorrect = true;
+            } else {
+                misconceptionMsg = (q.feedback && q.feedback.wrongChoices && q.feedback.wrongChoices[selectedVal]) 
+                    ? q.feedback.wrongChoices[selectedVal] 
+                    : "選擇的答案不正確喔，請再觀察題目想想看！";
+            }
+        }
+
+        // 2. 算式輸入檢驗
+        else {
+            const unfilled = Array.from(document.querySelectorAll('#ai-equation-display .frac-input-num, #ai-equation-display .frac-input-den, #ai-equation-display .whole-input-box')).some(el => el.innerText === '?');
+            if (unfilled) {
+                soundEffects.playWrong();
+                ttsManager.speak("算式還沒填寫完整呢，請點選問號格用鍵盤填寫呢。");
+                return;
+            }
+
+            const inputs = {};
+            document.querySelectorAll('#ai-equation-display [data-target], #ai-equation-display .whole-input-box').forEach(el => {
+                const target = el.getAttribute('data-target') || el.id;
+                inputs[target] = el.innerText === '?' ? null : parseInt(el.innerText);
+            });
+
+            if (q.type === 'fraction-input') {
+                if (inputs['ai-f1-num'] === q.answer.num && inputs['ai-f1-den'] === q.answer.den) {
+                    isCorrect = true;
+                } else {
+                    if (inputs['ai-f1-num'] !== q.answer.num) misconceptionMsg = q.feedback.wrongNum;
+                    else misconceptionMsg = q.feedback.wrongDen;
+                }
+            } else if (q.type === 'equation') {
+                const numAns = inputs['ai-fans-num'];
+                const denAns = inputs['ai-fans-den'];
+                if (numAns === q.answer.numAns && denAns === q.answer.denAns) {
+                    isCorrect = true;
+                } else {
+                    if (denAns === q.answer.den1 + q.answer.den2) {
+                        misconceptionMsg = q.feedback.denAddError || "分母相加了！同分母加法中，分母代表平分的份數，是不變的喔！";
+                    } else if (numAns !== q.answer.numAns) {
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤囉！只需將分子相加即可。";
+                    } else {
+                        misconceptionMsg = "分母不對喔！同分母加法中，分母是不變的呢。";
+                    }
+                }
+            } else if (q.type === 'equation-whole') {
+                const numAns = inputs['ai-fans-num'];
+                const denAns = inputs['ai-fans-den'];
+                const wholeAns = inputs['ai-wholeans'];
+                if (numAns === q.answer.numAns && denAns === q.answer.denAns && wholeAns === q.answer.wholeAns) {
+                    isCorrect = true;
+                } else {
+                    if (denAns === q.answer.den1 + q.answer.den2) {
+                        misconceptionMsg = q.feedback.denAddError || "分母相加了喔！分母維持不變。";
+                    } else if (wholeAns !== q.answer.wholeAns && wholeAns !== null) {
+                        misconceptionMsg = "後面的整數算錯了喔。當分子和分母一樣大時，它會等於整數 1 呢。";
+                    } else {
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！";
+                    }
+                }
+            } else if (q.type === 'equation-convert') {
+                const num2 = inputs['ai-f2-num'];
+                const numAns = inputs['ai-fans-num'];
+                const denAns = inputs['ai-fans-den'];
+                if (num2 === q.answer.num2 && numAns === q.answer.numAns && denAns === q.answer.denAns) {
+                    isCorrect = true;
+                } else {
+                    if (num2 !== q.answer.num2) misconceptionMsg = q.feedback.convertError;
+                    else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) misconceptionMsg = q.feedback.denSubError || "減法計算時，分母是維持不變的喔！";
+                    else misconceptionMsg = q.feedback.numError;
+                }
+            } else if (q.type === 'equation-whole-sub') {
+                const num1 = inputs['ai-f1-num'];
+                const den1 = inputs['ai-f1-den'];
+                const numAns = inputs['ai-fans-num'];
+                const denAns = inputs['ai-fans-den'];
+                if (num1 === q.answer.num1 && den1 === q.answer.den1 && numAns === q.answer.numAns && denAns === q.answer.denAns) {
+                    isCorrect = true;
+                } else {
+                    if (num1 !== q.answer.num1 || den1 !== q.answer.den1) misconceptionMsg = q.feedback.convertError;
+                    else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) misconceptionMsg = q.feedback.denSubError || "減法計算時，分母維持不變喔！";
+                    else misconceptionMsg = q.feedback.numError;
+                }
+            } else if (q.type === 'equation-add-to-whole') {
+                const numAns = inputs['ai-fans-num'];
+                const denAns = inputs['ai-fans-den'];
+                const wholeAns = inputs['ai-wholeans'];
+                if (numAns === q.answer.numAns && denAns === q.answer.denAns && wholeAns === q.answer.wholeAns) {
+                    isCorrect = true;
+                } else {
+                    if (denAns === q.answer.den1 + q.answer.den2) misconceptionMsg = q.feedback.denAddError;
+                    else if (wholeAns !== q.answer.wholeAns) misconceptionMsg = "後面的整數算錯了喔！分子分母相等時等於 1 呢。";
+                    else misconceptionMsg = q.feedback.numError;
+                }
+            }
+        }
+
+        // ================= 答對處理 =================
+        if (isCorrect) {
+            soundEffects.playCorrect();
+            soundEffects.playCharge();
+            this.aiCorrectCount++;
+            this.aiTotalAnswered++;
+            this.playerCombo++;
+            if (this.playerCombo > this.maxPlayerCombo) {
+                this.maxPlayerCombo = this.playerCombo;
+            }
+
+            let energyGain = 15;
+            let isCritical = false;
+
+            // 連擊判定 (Combo >= 2 觸發黃金奶油暴擊)
+            if (this.playerCombo >= 2) {
+                isCritical = true;
+                energyGain = 20; // 基礎 +15% + 暴擊 +5%
+                this.triggerGoldenButterCritical();
+            }
+
+            // 更新 Combo 徽章
+            const comboBadge = document.getElementById('player-combo-badge');
+            if (comboBadge) {
+                comboBadge.innerText = `🔥 連擊 x${this.playerCombo}`;
+                comboBadge.classList.remove('hidden');
+            }
+
+            this.playerEnergy = Math.min(100, this.playerEnergy + energyGain);
+            this.updateAiDashboardUI();
+
+            // 檢查玩家勝利
+            if (this.playerEnergy >= 100) {
+                this.finishAiChallenge(true);
+                return;
+            }
+
+            // 語音激勵
+            if (isCritical) {
+                ttsManager.speak(`太棒了！黃金奶油暴擊，魔力充能百分之二十！`);
+            } else {
+                ttsManager.speak(`答對了！原料投入成功，魔力充能百分之十五呢！`);
+            }
+
+            // 自動進入下一題
+            setTimeout(() => {
+                if (this.isAiGameActive) {
+                    this.nextAiQuestion();
+                }
+            }, 800);
+        }
+
+        // ================= 答錯處理 (觸發教學安全閥) =================
+        else {
+            soundEffects.playWrong();
+            this.aiTotalAnswered++;
+            this.playerCombo = 0;
+
+            const comboBadge = document.getElementById('player-combo-badge');
+            if (comboBadge) comboBadge.classList.add('hidden');
+
+            // 顯示迷思診斷回饋橫條
+            const feedbackBar = document.getElementById('ai-feedback-bar');
+            if (feedbackBar) {
+                feedbackBar.innerHTML = `💡 <strong>烘焙小精靈提示：</strong>${misconceptionMsg}`;
+                feedbackBar.classList.remove('hidden');
+            }
+
+            // 啟動教學安全閥 (AI 思考計時暫停，確保學生讀懂提示)
+            this.pauseAiSafetyValve(true);
+            ttsManager.speak(misconceptionMsg);
+
+            // 切換按鈕為「下一題」
+            const btnSubmit = document.getElementById('btn-ai-submit');
+            const btnNext = document.getElementById('btn-ai-next');
+            if (btnSubmit) btnSubmit.classList.add('hidden');
+            if (btnNext) btnNext.classList.remove('hidden');
+        }
+    }
+
+    nextAiQuestion() {
+        if (!this.isAiGameActive) return;
+        this.pauseAiSafetyValve(false); // 解除教學安全閥，AI 恢復思考
+        this.aiCurrentQuestionIdx++;
+        this.loadAiQuestion();
+    }
+
+    triggerGoldenButterCritical() {
+        // 播放暴擊與打噴嚏音效
+        soundEffects.playCombo();
+        setTimeout(() => soundEffects.playSneeze(), 250);
+
+        // 顯示暴擊煙霧覆蓋層
+        const critLayer = document.getElementById('ai-critical-layer');
+        if (critLayer) {
+            critLayer.classList.remove('hidden');
+            setTimeout(() => {
+                if (critLayer) critLayer.classList.add('hidden');
+            }, 2800);
+        }
+
+        // 貓頭鷹大師打噴嚏暫停 3 秒
+        const aiBubble = document.getElementById('ai-status-bubble');
+        if (aiBubble) {
+            aiBubble.innerText = '🤧 哈啾！好濃的奶油煙霧...（打噴嚏暫停 3 秒）';
+        }
+
+        this.aiIsPaused = true;
+        setTimeout(() => {
+            if (this.isAiGameActive) {
+                const safetyHint = document.getElementById('ai-safety-hint');
+                const isUnderSafety = safetyHint && !safetyHint.classList.contains('hidden');
+                if (!isUnderSafety) {
+                    this.aiIsPaused = false;
+                    if (aiBubble) aiBubble.innerText = '🦉 調配配方中...';
+                }
+            }
+        }, 3000);
+    }
+
+    pauseAiSafetyValve(isPaused) {
+        this.aiIsPaused = isPaused;
+        const safetyHint = document.getElementById('ai-safety-hint');
+        if (safetyHint) {
+            if (isPaused) safetyHint.classList.remove('hidden');
+            else safetyHint.classList.add('hidden');
+        }
+
+        const aiBubble = document.getElementById('ai-status-bubble');
+        if (aiBubble && isPaused) {
+            aiBubble.innerText = '🦉 考官注視中（思考暫停）...';
+        } else if (aiBubble && !this.aiIsPaused) {
+            aiBubble.innerText = '🦉 調配配方中...';
+        }
+    }
+
+    startAiThinkingCycle() {
+        if (!this.isAiGameActive) return;
+        this.clearAiThinkingTimer();
+
+        const diffConfigs = {
+            easy: { minMs: 12000, maxMs: 15000, accuracy: 0.75 },
+            normal: { minMs: 8000, maxMs: 10000, accuracy: 0.90 },
+            hard: { minMs: 4500, maxMs: 6500, accuracy: 1.00 }
+        };
+
+        const config = diffConfigs[this.aiDifficulty] || diffConfigs.normal;
+        let thinkDuration = Math.floor(Math.random() * (config.maxMs - config.minMs)) + config.minMs;
+
+        // Rubber-banding 防挫折機制：若學生落後達 30% 能量，AI 打瞌睡延長 +4 秒
+        let isNoddingOff = false;
+        if (this.aiDifficulty === 'easy' && this.playerEnergy <= this.aiEnergy - 30) {
+            thinkDuration += 4000;
+            isNoddingOff = true;
+            const aiBubble = document.getElementById('ai-status-bubble');
+            if (aiBubble) aiBubble.innerText = '💤 貓頭鷹大師偷打瞌睡中...';
+        }
+
+        this.aiThinkingTotalMs = thinkDuration;
+        this.aiThinkingElapsedMs = 0;
+
+        const thinkFill = document.getElementById('ai-think-fill');
+        if (thinkFill) thinkFill.style.width = '0%';
+
+        const intervalMs = 100;
+
+        this.aiThinkingInterval = setInterval(() => {
+            if (!this.isAiGameActive) {
+                this.clearAiThinkingTimer();
+                return;
+            }
+
+            // 若處於暫停狀態 (打噴嚏或教學安全閥)，不累加經過時間
+            if (this.aiIsPaused) {
+                return;
+            }
+
+            this.aiThinkingElapsedMs += intervalMs;
+            const pct = Math.min(100, (this.aiThinkingElapsedMs / this.aiThinkingTotalMs) * 100);
+
+            if (thinkFill) {
+                thinkFill.style.width = `${pct}%`;
+            }
+
+            // 思考時間到，貓頭鷹出手！
+            if (this.aiThinkingElapsedMs >= this.aiThinkingTotalMs) {
+                this.clearAiThinkingTimer();
+                this.resolveAiTurn(config.accuracy);
+            }
+        }, intervalMs);
+    }
+
+    resolveAiTurn(accuracy) {
+        if (!this.isAiGameActive) return;
+
+        const aiBubble = document.getElementById('ai-status-bubble');
+        const roll = Math.random();
+
+        // 依正確率判定
+        if (roll <= accuracy) {
+            soundEffects.playClick();
+            this.aiEnergy = Math.min(100, this.aiEnergy + 15);
+            this.updateAiDashboardUI();
+
+            if (aiBubble) {
+                aiBubble.innerText = '🦉 貓頭鷹大師調配成功！(+15%)';
+            }
+
+            // 檢查 AI 是否獲勝
+            if (this.aiEnergy >= 100) {
+                this.finishAiChallenge(false);
+                return;
+            }
+        } else {
+            // AI 失誤
+            soundEffects.playWrong();
+            if (aiBubble) {
+                aiBubble.innerText = '💨 貓頭鷹大師原料配方失誤，冒出黑煙！';
+            }
+        }
+
+        // 短暫間隔後開啟下一個 AI 思考循環
+        this.aiThinkingTimeout = setTimeout(() => {
+            if (this.isAiGameActive) {
+                if (aiBubble) aiBubble.innerText = '🦉 調配配方中...';
+                this.startAiThinkingCycle();
+            }
+        }, 1200);
+    }
+
+    clearAiThinkingTimer() {
+        if (this.aiThinkingInterval) {
+            clearInterval(this.aiThinkingInterval);
+            this.aiThinkingInterval = null;
+        }
+        if (this.aiThinkingTimeout) {
+            clearTimeout(this.aiThinkingTimeout);
+            this.aiThinkingTimeout = null;
+        }
+    }
+
+    cleanupAiChallenge() {
+        this.isAiGameActive = false;
+        this.aiIsPaused = false;
+        this.clearAiThinkingTimer();
+
+        const critLayer = document.getElementById('ai-critical-layer');
+        if (critLayer) critLayer.classList.add('hidden');
+
+        const safetyHint = document.getElementById('ai-safety-hint');
+        if (safetyHint) safetyHint.classList.add('hidden');
+
+        const feedbackBar = document.getElementById('ai-feedback-bar');
+        if (feedbackBar) feedbackBar.classList.add('hidden');
+    }
+
+    finishAiChallenge(playerWon) {
+        this.cleanupAiChallenge();
+
+        let title = "";
+        let emoji = "";
+        let titleBadge = "";
+
+        if (playerWon) {
+            soundEffects.playVictory();
+            emoji = "🏆";
+            title = "魔力出爐，大獲全勝！";
+            if (this.aiDifficulty === 'hard') {
+                titleBadge = "傳奇魔力烘焙王 👑";
+            } else if (this.maxPlayerCombo >= 3) {
+                titleBadge = "黃金奶油大師 ✨";
+            } else {
+                titleBadge = "星光烘焙高手 🥐";
+            }
+            ttsManager.speak(`太棒了！你的星光烤爐率先充能完成，獲得了${titleBadge}的榮譽呢！`);
+        } else {
+            soundEffects.playWrong();
+            emoji = "🦉";
+            title = "貓頭鷹大師率先出爐！";
+            titleBadge = "見習魔法烘焙師 🧁";
+            ttsManager.speak(`哎呀，貓頭鷹大師的月光烤爐先完成充能出爐囉。不要氣餒，再挑戰一次吧呢！`);
+        }
+
+        const elapsedSec = Math.round((Date.now() - this.aiGameStartTime) / 1000);
+
+        document.getElementById('result-title').innerText = title;
+        document.getElementById('result-emoji').innerText = emoji;
+        document.getElementById('result-stats').innerHTML = `
+            <div class="stat-item"><span>星光烤爐魔力：</span><span class="stat-val" style="color: var(--accent-gold);">${this.playerEnergy}%</span></div>
+            <div class="stat-item"><span>貓頭鷹大師魔力：</span><span class="stat-val">${this.aiEnergy}%</span></div>
+            <div class="stat-item"><span>最高連擊 (Combo)：</span><span class="stat-val">🔥 x${this.maxPlayerCombo}</span></div>
+            <div class="stat-item"><span>挑戰難度：</span><span class="stat-val">${this.aiDifficulty === 'easy' ? '⭐ 見習學徒' : this.aiDifficulty === 'normal' ? '⭐⭐ 熟練師傅' : '⭐⭐⭐ 傳奇主廚'}</span></div>
+            <div class="stat-item"><span>烘焙稱號：</span><span class="stat-val" style="color: var(--accent-strawberry); font-weight: bold;">${titleBadge}</span></div>
+            <div class="stat-item"><span>挑戰用時：</span><span class="stat-val">${elapsedSec} 秒</span></div>
+        `;
+
+        this.showScreen('screen-result');
     }
 }

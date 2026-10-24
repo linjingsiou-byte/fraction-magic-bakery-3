@@ -1897,3 +1897,440 @@ button {
     border-bottom-width: 2px !important;
 }
 
+/* ==================== 單人 AI 挑戰賽（魔力烤箱充能賽）樣式 ==================== */
+.ai-intro-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(30, 18, 15, 0.6);
+    border: 2px solid var(--accent-gold);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.ai-intro-avatar {
+    font-size: 3rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 8px rgba(229, 169, 60, 0.4));
+    animation: floatOwl 3s ease-in-out infinite;
+}
+
+@keyframes floatOwl {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.ai-intro-desc h4 {
+    color: var(--accent-gold);
+    font-size: 1.15rem;
+    margin-bottom: 4px;
+    font-family: var(--font-heading);
+}
+
+.ai-intro-desc p {
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.ai-difficulty-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.ai-diff-card {
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    position: relative;
+}
+
+.ai-diff-card:hover {
+    border-color: var(--accent-gold);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+
+.ai-diff-card.active {
+    border-color: var(--accent-gold);
+    background: linear-gradient(135deg, rgba(229, 169, 60, 0.15) 0%, rgba(42, 27, 23, 0.8) 100%);
+    box-shadow: 0 0 15px rgba(229, 169, 60, 0.3);
+    transform: translateY(-2px);
+}
+
+.ai-diff-card .diff-badge {
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--accent-gold);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+}
+
+.ai-diff-card .diff-avatar {
+    font-size: 2.2rem;
+    margin-bottom: 6px;
+}
+
+.ai-diff-card .diff-title {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+
+.ai-diff-card .diff-stats {
+    font-size: 0.8rem;
+    color: var(--accent-gold);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.ai-diff-card .diff-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+}
+
+.start-game-btn.ai-start {
+    background: linear-gradient(135deg, #a855f7 0%, #d97706 100%);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+}
+
+.start-game-btn.ai-start:hover {
+    box-shadow: 0 8px 25px rgba(168, 85, 247, 0.6);
+    transform: translateY(-2px);
+}
+
+/* ==================== AI 烤箱充能畫面 ==================== */
+.ai-challenge-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    gap: 16px;
+}
+
+.oven-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 150px 1fr;
+    gap: 16px;
+    align-items: center;
+    background: var(--glass-bg);
+    border: 2px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 16px 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: var(--box-shadow-magic);
+}
+
+.oven-card {
+    background: rgba(30, 18, 15, 0.6);
+    border-radius: 16px;
+    padding: 12px 16px;
+    transition: var(--transition-smooth);
+}
+
+.oven-card.player-oven {
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 0 15px rgba(229, 169, 60, 0.2);
+}
+
+.oven-card.ai-oven {
+    border: 2px solid #a855f7;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+}
+
+.oven-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.oven-header .avatar-tag {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.oven-header .avatar-icon {
+    font-size: 1.8rem;
+}
+
+.oven-header .avatar-name {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.player-oven .avatar-name {
+    color: var(--accent-gold);
+}
+
+.ai-oven .avatar-name {
+    color: #c084fc;
+}
+
+.ai-diff-tag {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.charge-percentage {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 900;
+}
+
+.player-oven .charge-percentage {
+    color: var(--accent-gold);
+    text-shadow: 0 0 10px rgba(229, 169, 60, 0.5);
+}
+
+.ai-oven .charge-percentage {
+    color: #c084fc;
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+.combo-badge {
+    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    animation: comboPulse 0.5s ease-out;
+}
+
+@keyframes comboPulse {
+    0% { transform: scale(0.6); }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.charge-bar-track {
+    width: 100%;
+    height: 16px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.charge-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+}
+
+.charge-bar-fill.player-fill {
+    background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+
+.charge-bar-fill.ai-fill {
+    background: linear-gradient(90deg, #8b5cf6 0%, #06b6d4 100%);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+}
+
+.oven-visual-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.oven-furnace {
+    width: 50px;
+    height: 40px;
+    background: #150d0b;
+    border: 2px solid #513a33;
+    border-radius: 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.oven-flame {
+    position: absolute;
+    bottom: -5px;
+    width: 100%;
+    height: 20px;
+    opacity: 0.8;
+    filter: blur(2px);
+    animation: flameFlicker 1.5s ease-in-out infinite alternate;
+}
+
+.flame-starlight {
+    background: radial-gradient(ellipse at bottom, #f59e0b 0%, #ef4444 70%, transparent 100%);
+}
+
+.flame-moonlight {
+    background: radial-gradient(ellipse at bottom, #06b6d4 0%, #a855f7 70%, transparent 100%);
+}
+
+@keyframes flameFlicker {
+    0% { transform: scaleY(0.8) scaleX(0.9); }
+    100% { transform: scaleY(1.3) scaleX(1.1); }
+}
+
+.oven-baked-item {
+    font-size: 1.4rem;
+    z-index: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.oven-status-label {
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+}
+
+.ai-status-bubble {
+    display: inline-block;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+
+.ai-think-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ai-think-fill {
+    height: 100%;
+    background: #a855f7;
+    width: 0%;
+    transition: width 0.1s linear;
+}
+
+/* 中央 VS */
+.dashboard-vs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.vs-circle {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, #150d0b 100%);
+    border: 2px solid var(--accent-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--accent-gold);
+    box-shadow: 0 0 10px rgba(229, 169, 60, 0.3);
+}
+
+.target-flag {
+    font-size: 0.78rem;
+    color: var(--accent-gold);
+    font-weight: 700;
+}
+
+.ai-safety-hint {
+    background: rgba(142, 182, 122, 0.2);
+    border: 1px solid var(--accent-matcha);
+    color: var(--accent-matcha);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+    animation: pulseHint 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulseHint {
+    0% { opacity: 0.8; transform: scale(0.98); }
+    100% { opacity: 1; transform: scale(1.02); }
+}
+
+/* 暴擊麵粉煙霧覆蓋層 */
+.flour-smoke-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(229, 169, 60, 0.1) 70%, transparent 100%);
+    animation: flourSmokeFade 3s ease-out forwards;
+}
+
+@keyframes flourSmokeFade {
+    0% { opacity: 0; transform: scale(0.9); }
+    20% { opacity: 1; transform: scale(1); }
+    80% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0; transform: scale(1.1); }
+}
+
+.critical-banner {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.95) 0%, rgba(239, 68, 68, 0.95) 100%);
+    color: #fff;
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 900;
+    padding: 16px 36px;
+    border-radius: 50px;
+    border: 3px solid #fef3c7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(245, 158, 11, 0.8);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    animation: bannerPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes bannerPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* AI 答錯/回饋小提示橫條 */
+.ai-feedback-bar {
+    background: rgba(42, 27, 23, 0.9);
+    border-left: 4px solid var(--accent-gold);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    margin-top: 10px;
+    line-height: 1.5;
+}
+
+.ai-feedback-bar.warning {
+    border-left-color: var(--accent-strawberry);
+}

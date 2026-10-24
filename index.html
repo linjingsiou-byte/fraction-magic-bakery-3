@@ -30,6 +30,9 @@
                 <button id="btn-mode-double" class="mode-btn" data-mode="double">
                     <span class="icon">👥</span> 雙人烘焙對決
                 </button>
+                <button id="btn-mode-ai" class="mode-btn" data-mode="ai">
+                    <span class="icon">🤖</span> 單人 AI 挑戰賽
+                </button>
             </div>
             
             <!-- 語音開關 -->
@@ -103,6 +106,56 @@
                         </div>
                     </div>
                     <button id="btn-start-battle" class="start-game-btn battle">開啟雙人烘焙對決 ⚔️</button>
+                </div>
+
+                <!-- 單人 AI 挑戰賽設定區 (魔力烤箱充能賽) -->
+                <div id="ai-setup-area" class="setup-container hidden">
+                    <h3 class="section-title">🧪 魔力烤箱充能賽設定</h3>
+                    <div class="ai-intro-card">
+                        <div class="ai-intro-avatar">🦉</div>
+                        <div class="ai-intro-desc">
+                            <h4>對手：煉金貓頭鷹大師</h4>
+                            <p>「霍霍！歡迎來到魔法學院烘焙大賽！用正確的分數加減配方為你的星光烤爐充能到 <strong>100%</strong> 吧！連續答對還能觸發黃金奶油暴擊喔！」</p>
+                        </div>
+                    </div>
+                    <div class="setup-options">
+                        <div class="option-group">
+                            <label>選擇對手難度：</label>
+                            <div class="ai-difficulty-grid" id="ai-difficulty-select">
+                                <button class="ai-diff-card" data-diff="easy">
+                                    <div class="diff-badge">⭐ 輕鬆練習</div>
+                                    <div class="diff-avatar">🦉🌱</div>
+                                    <div class="diff-title">見習烘焙學徒</div>
+                                    <div class="diff-stats">思考 12~15 秒 ‧ 75% 準確率</div>
+                                    <div class="diff-desc">偶爾失誤烤焦，落後時會打瞌睡放水</div>
+                                </button>
+                                <button class="ai-diff-card active" data-diff="normal">
+                                    <div class="diff-badge">⭐⭐ 標準對決</div>
+                                    <div class="diff-avatar">🦉✨</div>
+                                    <div class="diff-title">熟練甜點師傅</div>
+                                    <div class="diff-stats">思考 8~10 秒 ‧ 90% 準確率</div>
+                                    <div class="diff-desc">配速穩定，適合一般實戰挑戰</div>
+                                </button>
+                                <button class="ai-diff-card" data-diff="hard">
+                                    <div class="diff-badge">⭐⭐⭐ 極限主廚</div>
+                                    <div class="diff-avatar">🦉👑</div>
+                                    <div class="diff-title">傳奇皇家主廚</div>
+                                    <div class="diff-stats">思考 4.5~6.5 秒 ‧ 100% 零失誤</div>
+                                    <div class="diff-desc">極速出爐，需善用連擊暴擊才可獲勝</div>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="option-group">
+                            <label>選擇對決題目主題：</label>
+                            <div class="option-buttons" id="ai-topic-select">
+                                <button class="opt-btn active" data-topic="mix">🌀 綜合大挑戰</button>
+                                <button class="opt-btn" data-topic="add">➕ 分數加法</button>
+                                <button class="opt-btn" data-topic="sub">➖ 分數減法</button>
+                                <button class="opt-btn" data-topic="sub1">📏 1減分數</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-start-ai" class="start-game-btn ai-start">開啟烤箱充能對決 🧪</button>
                 </div>
                 
                 <!-- 烘焙秘笈按鈕 -->
@@ -235,6 +288,124 @@
 
                 <div class="battle-actions">
                     <button id="btn-battle-back-lobby" class="action-btn exit">結束對決 🚪</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 單人 AI 挑戰賽畫面（魔力烤箱充能賽） ==================== -->
+        <section id="screen-ai-play" class="screen">
+            <!-- 麵粉煙霧與暴擊特效層 -->
+            <div id="ai-critical-layer" class="flour-smoke-overlay hidden">
+                <div class="flour-smoke-cloud"></div>
+                <div class="critical-banner">✨ 黃金奶油暴擊！貓頭鷹大師打噴嚏暫停 3 秒！🤧</div>
+            </div>
+
+            <div class="ai-challenge-container">
+                <!-- 頂部：雙烤箱充能儀表板 -->
+                <div class="oven-dashboard">
+                    <!-- 玩家星光烤爐 -->
+                    <div class="oven-card player-oven" id="player-oven-card">
+                        <div class="oven-header">
+                            <div class="avatar-tag">
+                                <span class="avatar-icon">🧁</span>
+                                <div class="avatar-info">
+                                    <span class="avatar-name">我的星光烤爐</span>
+                                    <span class="combo-badge hidden" id="player-combo-badge">🔥 連擊 x2</span>
+                                </div>
+                            </div>
+                            <div class="charge-percentage" id="player-charge-pct">0%</div>
+                        </div>
+                        <div class="charge-bar-track">
+                            <div class="charge-bar-fill player-fill" id="player-charge-fill" style="width: 0%;">
+                                <span class="glow-sparkle">✨</span>
+                            </div>
+                        </div>
+                        <div class="oven-visual-box">
+                            <div class="oven-furnace player-furnace" id="player-furnace">
+                                <div class="oven-flame flame-starlight"></div>
+                                <span class="oven-baked-item" id="player-baked-item">🥐</span>
+                            </div>
+                            <div class="oven-status-label" id="player-oven-status">持續充能中... (目標 100%)</div>
+                        </div>
+                    </div>
+
+                    <!-- 中央 VS 標誌與狀態 -->
+                    <div class="dashboard-vs">
+                        <div class="vs-circle">VS</div>
+                        <div class="target-flag">🏁 目標 100%</div>
+                        <div class="ai-safety-hint hidden" id="ai-safety-hint">🛡️ 思考保護中（AI 暫停）</div>
+                    </div>
+
+                    <!-- 貓頭鷹月光烤爐 -->
+                    <div class="oven-card ai-oven" id="ai-oven-card">
+                        <div class="oven-header">
+                            <div class="charge-percentage" id="ai-charge-pct">0%</div>
+                            <div class="avatar-tag ai-tag">
+                                <div class="avatar-info" style="text-align: right;">
+                                    <span class="avatar-name" id="ai-display-name">煉金貓頭鷹大師</span>
+                                    <span class="ai-diff-tag" id="ai-display-diff">⭐ 見習學徒</span>
+                                </div>
+                                <span class="avatar-icon ai-avatar" id="ai-avatar-icon">🦉</span>
+                            </div>
+                        </div>
+                        <div class="charge-bar-track">
+                            <div class="charge-bar-fill ai-fill" id="ai-charge-fill" style="width: 0%;">
+                                <span class="glow-sparkle">🌙</span>
+                            </div>
+                        </div>
+                        <div class="oven-visual-box">
+                            <div class="oven-furnace ai-furnace" id="ai-furnace">
+                                <div class="oven-flame flame-moonlight"></div>
+                                <span class="oven-baked-item" id="ai-baked-item">🥖</span>
+                            </div>
+                            <div class="oven-status-label" id="ai-oven-status">
+                                <span class="ai-status-bubble" id="ai-status-bubble">🦉 調配配方中...</span>
+                                <div class="ai-think-bar">
+                                    <div class="ai-think-fill" id="ai-think-fill" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 下方工作區：左邊答題，右邊互動配料 -->
+                <div class="game-layout ai-game-layout">
+                    <!-- 左側：題目與直式算式輸入 -->
+                    <div class="game-panel left-panel">
+                        <div class="panel-header">
+                            <span class="level-indicator" id="ai-question-indicator">題目載入中...</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-fill" id="ai-round-progress" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 題目區 -->
+                        <div class="question-box">
+                            <button class="repeat-audio-btn" id="btn-ai-audio-repeat" title="重播題目語音">🔊</button>
+                            <p class="question-text" id="ai-question-text">載入題目中...</p>
+                        </div>
+
+                        <!-- 算式作答與輸入區 -->
+                        <div class="workspace-area">
+                            <div class="equation-display" id="ai-equation-display"></div>
+                            <div class="keyboard-area" id="ai-keyboard"></div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="btn-ai-submit" class="action-btn submit">投入原料充能 🔮</button>
+                            <button id="btn-ai-next" class="action-btn next hidden">下一題 ➔</button>
+                            <button id="btn-ai-back-lobby" class="action-btn exit">返回大廳 🚪</button>
+                        </div>
+
+                        <!-- 迷思診斷回饋橫條 -->
+                        <div id="ai-feedback-bar" class="ai-feedback-bar hidden"></div>
+                    </div>
+
+                    <!-- 右側：配料互動盤 -->
+                    <div class="game-panel right-panel interactive-board">
+                        <div class="board-title">🔮 魔法配料盤</div>
+                        <div class="board-content" id="ai-interactive-content"></div>
+                    </div>
                 </div>
             </div>
         </section>

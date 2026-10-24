@@ -233,6 +233,90 @@ class SoundManager {
             console.warn("Failed to play audio", e);
         }
     }
+
+    // 連擊暴擊音效 (黃金奶油暴擊：明亮華麗的四連琶音 + 閃爍諧波)
+    playCombo() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
+            notes.forEach((freq, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                gain.gain.setValueAtTime(0, now + idx * 0.06);
+                gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.06 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.06 + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now + idx * 0.06);
+                osc.stop(now + idx * 0.06 + 0.25);
+            });
+        } catch (e) {
+            console.warn("Failed to play combo audio", e);
+        }
+    }
+
+    // 貓頭鷹大師打噴嚏音效 (哈啾！呼嘯驟降與煙霧嘶嘶聲)
+    playSneeze() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            // 1. 蓄力驟降音
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(900, now);
+            osc.frequency.exponentialRampToValueAtTime(150, now + 0.25);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+
+            // 2. 煙霧氣流嘶嘶聲 (調頻正弦模擬)
+            const hissOsc = this.ctx.createOscillator();
+            const hissGain = this.ctx.createGain();
+            hissOsc.type = 'square';
+            hissOsc.frequency.setValueAtTime(320, now + 0.08);
+            hissOsc.frequency.linearRampToValueAtTime(80, now + 0.4);
+            hissGain.gain.setValueAtTime(0.12, now + 0.08);
+            hissGain.gain.exponentialRampToValueAtTime(0.005, now + 0.45);
+            hissOsc.connect(hissGain);
+            hissGain.connect(this.ctx.destination);
+            hissOsc.start(now + 0.08);
+            hissOsc.stop(now + 0.45);
+        } catch (e) {
+            console.warn("Failed to play sneeze audio", e);
+        }
+    }
+
+    // 烤箱能量升溫充能音效 (厚重暖意低頻向上滑音)
+    playCharge() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(580, now + 0.35);
+            gain.gain.setValueAtTime(0.01, now);
+            gain.gain.linearRampToValueAtTime(0.15, now + 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } catch (e) {
+            console.warn("Failed to play charge audio", e);
+        }
+    }
 }
 
 // 實例化全域音效管理器
