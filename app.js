@@ -77,6 +77,39 @@ class MagicBakeryApp {
         this.aiCorrectCount = 0;
         this.aiTotalAnswered = 0;
         this.isAiGameActive = false;
+
+        // 學習迷思診斷統計（供結算畫面產出個人化診斷報告）
+        this.sessionMisconceptions = {
+            denError: 0,      // 分母跟著相加減
+            convert1Error: 0, // 整數 1 換算錯誤或分子分母相等概念混淆
+            numError: 0,      // 分子加減計算或計數錯誤
+            choiceError: 0    // 觀念比較選擇錯誤
+        };
+    }
+
+    resetSessionMisconceptions() {
+        this.sessionMisconceptions = {
+            denError: 0,
+            convert1Error: 0,
+            numError: 0,
+            choiceError: 0
+        };
+    }
+
+    getDiagnosticSummaryHtml() {
+        const m = this.sessionMisconceptions;
+        const totalErrors = m.denError + m.convert1Error + m.numError + m.choiceError;
+        let advice = "";
+        if (totalErrors === 0) {
+            advice = "✅ <strong>完美表現：</strong>你的同分母分數加減與「整數 1 等於分子分母相同分數」概念非常穩固喔！";
+        } else if (m.denError > 0) {
+            advice = "💡 <strong>關鍵迷思提醒：</strong>同分母分數相加或相減時，<strong>「分母（平分的總份數）」維持不變</strong>，只需要把分子相加或相減喔！";
+        } else if (m.convert1Error > 0) {
+            advice = "💡 <strong>關鍵迷思提醒：</strong>遇到整數 1 的加減時，記得先把 1 換成<strong>「分子和分母一樣大」</strong>的分數（例如 1 = <span class=\"fraction\"><span class=\"num-row\"><span>8</span></span><span class=\"den-row\"><span>8</span></span></span>），再進行計算喔！";
+        } else {
+            advice = "💡 <strong>貼心小提醒：</strong>觀念很棒！在數配料份數與計算分子加減時，再細心核對一次數字就會全對囉！";
+        }
+        return `<div class="diagnostic-summary-box">${advice}</div>`;
     }
 
     start() {
@@ -302,19 +335,26 @@ class MagicBakeryApp {
 
         // 實體鍵盤監聽支援 (支援單人與 AI 挑戰賽)
         window.addEventListener('keydown', (e) => {
-            if (this.activeScreen === 'screen-ai-play') {
+            if (this.activeScreen === 'screen-single-play') {
+                if (e.key >= '0' && e.key <= '9') {
+                    this.handleVirtualKeyboardInput(e.key);
+                } else if (e.key === 'Backspace') {
+                    this.handleVirtualKeyboardInput('清除');
+                } else if (e.key === 'Enter') {
+                    const nextBtn = document.getElementById('btn-single-next');
+                    if (nextBtn && !nextBtn.classList.contains('hidden')) {
+                        nextBtn.click();
+                    } else {
+                        this.submitSingleAnswer();
+                    }
+                }
+            } else if (this.activeScreen === 'screen-ai-play') {
                 if (e.key >= '0' && e.key <= '9') {
                     this.handleAiKeyboardInput(e.key);
                 } else if (e.key === 'Backspace') {
                     this.handleAiKeyboardInput('清除');
                 } else if (e.key === 'Enter') {
-                    const nextBtn = document.getElementById('btn-ai-next');
-                    if (nextBtn && !nextBtn.classList.contains('hidden')) {
-                        soundEffects.playClick();
-                        this.nextAiQuestion();
-                    } else {
-                        this.submitAiAnswer();
-                    }
+                    this.submitAiAnswer();
                 }
             }
         });
@@ -399,6 +439,7 @@ class MagicBakeryApp {
     // ==========================================================
     startSingleGame(level) {
         this.singleCurrentQuestionIdx = 0;
+        this.resetSessionMisconceptions();
         
         // 隨機抽取 5 題不重複 (Fisher-Yates 洗牌)
         const pool = [...gameQuestions[level]];
@@ -439,15 +480,46 @@ class MagicBakeryApp {
             ttsManager.speak(q.text);
         });
 
-        // 送出與下一題按鈕切換
+        // 送出與下一題按鈕切換與隱藏回饋橫條
         document.getElementById('btn-single-submit').classList.remove('hidden');
         document.getElementById('btn-single-next').classList.add('hidden');
+        const singleFeedbackBar = document.getElementById('single-feedback-bar');
+        if (singleFeedbackBar) {
+            singleFeedbackBar.classList.add('hidden');
+            singleFeedbackBar.className = 'ai-feedback-bar hidden';
+        }
 
         // 初始化作答區
         this.renderSingleWorkspace(q);
         
         // 初始化視覺互動區
         this.renderSingleInteraction(q);
+
+        // 依「先分母、後分子」順序選取第一個未填寫的問號格
+        const display = document.getElementById('single-equation-display');
+        const orderedCells = this.getOrderedInputCells(display);
+        const firstUnfilled = orderedCells.find(c => c.innerText === '?') || orderedCells[0];
+        if (firstUnfilled) {
+            this.activateInputCell(firstUnfilled);
+        }
+    }
+
+    // 依國小數學「先分母（平分份數）、後分子（拿取份數）」之教學順序取得輸入格清單
+    getOrderedInputCells(container) {
+        if (!container) return [];
+        const ordered = [];
+        const boxes = container.querySelectorAll('.frac-input-box, .whole-input-box');
+        boxes.forEach(box => {
+            if (box.classList.contains('frac-input-box')) {
+                const den = box.querySelector('.frac-input-den');
+                const num = box.querySelector('.frac-input-num');
+                if (den && !den.classList.contains('static-default')) ordered.push(den);
+                if (num && !num.classList.contains('static-default')) ordered.push(num);
+            } else if (box.classList.contains('whole-input-box')) {
+                ordered.push(box);
+            }
+        });
+        return ordered;
     }
 
     // 渲染單人作答區 (算式與鍵盤)
@@ -612,8 +684,9 @@ class MagicBakeryApp {
         // 綁定手寫虛擬鍵盤
         this.renderKeyboard('single-keyboard', (val) => this.handleVirtualKeyboardInput(val));
         
-        // 預設高亮第一個輸入小格
-        const firstInput = display.querySelector('.frac-input-num, .frac-input-den, .whole-input-box');
+        // 依「先分母、後分子」預設高亮第一個輸入小格
+        const orderedCells = this.getOrderedInputCells(display);
+        const firstInput = orderedCells.find(c => c.innerText === '?') || orderedCells[0];
         if (firstInput) {
             this.activateInputCell(firstInput);
         }
@@ -804,10 +877,12 @@ class MagicBakeryApp {
     }
 
     autoAdvanceInputFocus() {
-        const inputs = Array.from(document.querySelectorAll('#single-equation-display .frac-input-num, #single-equation-display .frac-input-den, #single-equation-display .whole-input-box'));
+        const display = document.getElementById('single-equation-display');
+        const inputs = this.getOrderedInputCells(display);
+        if (inputs.length === 0) return;
         const currentIdx = inputs.indexOf(this.singleActiveInputCell);
         
-        // 尋找下一個未填寫或者預設是問號的
+        // 依「先分母、後分子」順序尋找下一個未填寫的問號格
         for (let i = 1; i <= inputs.length; i++) {
             const nextCell = inputs[(currentIdx + i) % inputs.length];
             if (!nextCell.classList.contains('static-default') && nextCell.innerText === '?') {
@@ -815,6 +890,9 @@ class MagicBakeryApp {
                 return;
             }
         }
+        // 若都已填寫，循環切換至下一格方便修改
+        const nextCell = inputs[(currentIdx + 1) % inputs.length];
+        if (nextCell) this.activateInputCell(nextCell);
     }
 
     // 當輸入數值時，即時更新視覺表徵
@@ -828,7 +906,7 @@ class MagicBakeryApp {
         if (isNaN(numVal)) numVal = 0;
         if (isNaN(denVal) || denVal <= 0) denVal = q.visual.totalSlices || q.visual.totalItems;
 
-        this.updateInteractiveVisual(q, numVal, denVal);
+        this.updateInteractiveVisual(q, numVal, denVal, 'single-interactive-content');
     }
 
     getInputValue(dataTargetId) {
@@ -888,7 +966,7 @@ class MagicBakeryApp {
                 if (numEl && !numEl.classList.contains('selected') && this.currentPieSlicesCount > 0) {
                     numEl.innerText = this.currentPieSlicesCount;
                 }
-                if (denEl && !denEl.classList.contains('selected')) {
+                if (denEl && (this.currentPieSlicesCount > 0 || !q.text.includes('?/?'))) {
                     denEl.innerText = q.visual.totalSlices;
                 }
             };
@@ -990,13 +1068,13 @@ class MagicBakeryApp {
                     grid.appendChild(item);
                 }
 
-                // 同步更新分子/分母輸入框 (學童未點選輸入格時自動更新)
+                // 同步更新分子/分母輸入框 (學童操作配料盤時自動連動)
                 const numEl = document.querySelector(`[data-target="${prefix}-f1-num"]`);
                 const denEl = document.querySelector(`[data-target="${prefix}-f1-den"]`);
                 if (numEl && !numEl.classList.contains('selected') && this.currentDiscreteCount > 0) {
                     numEl.innerText = this.currentDiscreteCount;
                 }
-                if (denEl && !denEl.classList.contains('selected')) {
+                if (denEl && (this.currentDiscreteCount > 0 || !q.text.includes('?/?'))) {
                     denEl.innerText = q.visual.totalItems;
                 }
             };
@@ -1069,17 +1147,17 @@ class MagicBakeryApp {
 
         // 3. 第二關：圓餅加法烤爐 (加法)
         else if (type === 'pie-add' || type === 'bread-add' || type === 'ribbon-add' || type === 'discrete-add') {
-            this.renderAddInteractive(container, q, 0); // 初始填寫追加數為0
+            this.renderAddInteractive(container, q, 0, prefix); // 初始填寫追加數為0
         }
 
         // 4. 第三關：減法老鼠與點心盒 (減法)
         else if (type === 'pie-sub' || type === 'discrete-sub' || type === 'bread-sub' || type === 'ribbon-sub') {
-            this.renderSubInteractive(container, q);
+            this.renderSubInteractive(container, q, prefix);
         }
 
         // 5. 第四關：整數 1 減分數彩帶剪切
         else if (type === 'ribbon-cut' || type === 'bread-cut' || type === 'discrete-cut' || type === 'ribbon-add-whole') {
-            this.renderCutInteractive(container, q);
+            this.renderCutInteractive(container, q, prefix);
         }
     }
 
@@ -1135,7 +1213,7 @@ class MagicBakeryApp {
     }
 
     // 第二關：加法動態渲染
-    renderAddInteractive(container, q, userAddedCount) {
+    renderAddInteractive(container, q, userAddedCount, prefix = 'single') {
         container.innerHTML = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'oven-container';
@@ -1205,11 +1283,15 @@ class MagicBakeryApp {
             if (initial + currentAdded < total) {
                 currentAdded++;
                 soundEffects.playClick();
-                this.renderAddInteractive(container, q, currentAdded);
+                this.renderAddInteractive(container, q, currentAdded, prefix);
                 
-                // 同步更新分子輸入格
-                const fansNum = document.querySelector('[data-target="single-fans-num"]');
-                if (fansNum && !fansNum.classList.contains('selected')) {
+                // 同步更新分母與分子輸入格（相容單人與 AI 模式）
+                const fansDen = document.querySelector(`[data-target="${prefix}-fans-den"]`);
+                if (fansDen && fansDen.innerText === '?') {
+                    fansDen.innerText = total;
+                }
+                const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
+                if (fansNum) {
                     fansNum.innerText = initial + currentAdded;
                 }
             } else {
@@ -1220,12 +1302,12 @@ class MagicBakeryApp {
         wrapper.querySelector('#btn-reset-val').addEventListener('click', () => {
             currentAdded = 0;
             soundEffects.playClick();
-            this.renderAddInteractive(container, q, 0);
+            this.renderAddInteractive(container, q, 0, prefix);
         });
     }
 
     // 第三關：減法互動渲染 (老鼠小偷)
-    renderSubInteractive(container, q) {
+    renderSubInteractive(container, q, prefix = 'single') {
         container.innerHTML = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'box-container';
@@ -1287,18 +1369,22 @@ class MagicBakeryApp {
                     this.currentRemovedCount++;
                 }
 
-                // 同步算式輸入格：
-                // 如果是 7/12 - 2/12 = 5/12 的中間輸入格 (f2)
-                const f2Num = document.querySelector('[data-target="single-f2-num"]');
+                // 同步算式輸入格（相容單人與 AI 模式）：
+                const f2Num = document.querySelector(`[data-target="${prefix}-f2-num"]`);
                 if (f2Num) {
                     f2Num.innerText = this.currentRemovedCount > 0 ? this.currentRemovedCount : '?';
                 }
                 
+                const fansDen = document.querySelector(`[data-target="${prefix}-fans-den"]`);
+                if (fansDen && fansDen.innerText === '?') {
+                    fansDen.innerText = total;
+                }
+
                 // 自動更新結果分子
-                const fansNum = document.querySelector('[data-target="single-fans-num"]');
+                const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
                 if (fansNum) {
                     const ans = initial - this.currentRemovedCount;
-                    fansNum.innerText = ans > 0 ? ans : '?';
+                    fansNum.innerText = ans >= 0 ? ans : '?';
                 }
 
                 // 如果是鉛筆題，且點選移走 2 枝，我們彈出「2 枝 = 2/12 盒」的提示
@@ -1337,10 +1423,12 @@ class MagicBakeryApp {
                 }
                 this.currentRemovedCount = selected;
                 
-                // 同步算式
-                const f2Num = document.querySelector('[data-target="single-f2-num"]');
+                // 同步算式（相容單人與 AI 模式）
+                const f2Num = document.querySelector(`[data-target="${prefix}-f2-num"]`);
                 if (f2Num) f2Num.innerText = sub;
-                const fansNum = document.querySelector('[data-target="single-fans-num"]');
+                const fansDen = document.querySelector(`[data-target="${prefix}-fans-den"]`);
+                if (fansDen) fansDen.innerText = total;
+                const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
                 if (fansNum) fansNum.innerText = initial - sub;
                 
                 ttsManager.speak(`老鼠小偷把 ${sub} ${isPencilProblem ? '枝' : '塊'} 偷走囉！`);
@@ -1359,7 +1447,7 @@ class MagicBakeryApp {
     }
 
     // 第四關：整數 1 減分數彩帶剪切
-    renderCutInteractive(container, q) {
+    renderCutInteractive(container, q, prefix = 'single') {
         container.innerHTML = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'ribbon-container';
@@ -1461,16 +1549,16 @@ class MagicBakeryApp {
         };
 
         const syncEquation = () => {
-            // 自動同步算式
-            const f1Num = document.querySelector('[data-target="single-f1-num"]');
-            const f1Den = document.querySelector('[data-target="single-f1-den"]');
+            // 自動同步算式（相容單人與 AI 模式）
+            const f1Num = document.querySelector(`[data-target="${prefix}-f1-num"]`);
+            const f1Den = document.querySelector(`[data-target="${prefix}-f1-den"]`);
             if (f1Num && f1Den) {
                 f1Num.innerText = total;
                 f1Den.innerText = total;
             }
 
-            const fansNum = document.querySelector('[data-target="single-fans-num"]');
-            const fansDen = document.querySelector('[data-target="single-fans-den"]');
+            const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
+            const fansDen = document.querySelector(`[data-target="${prefix}-fans-den"]`);
             if (fansNum && fansDen) {
                 fansNum.innerText = total - this.cutSegmentsCount;
                 fansDen.innerText = total;
@@ -1503,13 +1591,17 @@ class MagicBakeryApp {
             this.ribbonIsCut = true;
             renderSegments();
             
-            // 更新算式：把 1 換成 B/B
-            const f1Num = document.querySelector('[data-target="single-f1-num"]');
-            const f1Den = document.querySelector('[data-target="single-f1-den"]');
+            // 更新算式：把 1 換成 B/B（相容單人與 AI 模式）
+            const f1Num = document.querySelector(`[data-target="${prefix}-f1-num"]`);
+            const f1Den = document.querySelector(`[data-target="${prefix}-f1-den"]`);
             if (f1Num && f1Den) {
                 f1Num.innerText = total;
                 f1Den.innerText = total;
-                this.activateInputCell(f1Num);
+                if (prefix === 'ai') {
+                    this.activateAiInputCell(f1Num);
+                } else {
+                    this.activateInputCell(f1Num);
+                }
             }
 
             ttsManager.speak(`把1${isDiscrete ? '盒' : '公尺'}平分切成 ${total} 份，就是 ${total}/${total} 喔！`);
@@ -1528,10 +1620,12 @@ class MagicBakeryApp {
     }
 
     // ==================== 單人作答送出與判定 ====================
-    // 這裡我們有對學童答錯時進行「半透明重疊比對」的實作
+    // 支援即時迷思文字回饋橫條、迷思記錄、半透明重疊比對與雙軌長條對照卡
     submitSingleAnswer() {
         const q = this.singleQuestions[this.singleCurrentQuestionIdx];
         let isCorrect = false;
+        let misconceptionMsg = "";
+        let misconceptionType = null;
 
         // 1. 選擇題判定
         if (q.type === 'choice') {
@@ -1544,8 +1638,11 @@ class MagicBakeryApp {
             if (selectedVal === q.answer) {
                 isCorrect = true;
             } else {
-                // 播放客製化錯誤語音
-                ttsManager.speak(q.feedback.wrongChoices[selectedVal]);
+                misconceptionType = "choice_error";
+                misconceptionMsg = (q.feedback && q.feedback.wrongChoices && q.feedback.wrongChoices[selectedVal]) 
+                    ? q.feedback.wrongChoices[selectedVal] 
+                    : "選擇的答案不正確喔，再仔細想想！";
+                ttsManager.speak(misconceptionMsg);
             }
         } 
         
@@ -1570,10 +1667,13 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (inputs['single-f1-num'] !== q.answer.num) {
-                        ttsManager.speak(q.feedback.wrongNum);
+                        misconceptionType = "numerator_count";
+                        misconceptionMsg = q.feedback.wrongNum;
                     } else {
-                        ttsManager.speak(q.feedback.wrongDen);
+                        misconceptionType = "denominator_partition";
+                        misconceptionMsg = q.feedback.wrongDen;
                     }
+                    ttsManager.speak(misconceptionMsg);
                 }
             } else if (q.type === 'equation') {
                 const numAns = inputs['single-fans-num'];
@@ -1584,12 +1684,23 @@ class MagicBakeryApp {
                 } else {
                     // 診斷迷思：如果分母相加了 (例如 3/8 + 2/8 = 5/16)
                     if (denAns === q.answer.den1 + q.answer.den2) {
-                        ttsManager.speak(q.feedback.denAddError);
-                        this.showOverlapComparison(q, numAns, denAns); // 顯示重疊比對
+                        misconceptionType = "denominator_addition";
+                        misconceptionMsg = q.feedback.denAddError || "分母相加了！同分母加法中，分母代表每份的大小，是不變的喔！";
+                        ttsManager.speak(misconceptionMsg);
+                        this.showOverlapComparison(q, numAns, denAns, 'single-interactive-content'); // 顯示重疊與長條比對
+                    } else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) {
+                        misconceptionType = "denominator_subtraction";
+                        misconceptionMsg = q.feedback.denSubError || "減法計算時，分母是維持不變的喔！";
+                        ttsManager.speak(misconceptionMsg);
+                        this.showOverlapComparison(q, numAns, denAns, 'single-interactive-content');
                     } else if (numAns !== q.answer.numAns) {
-                        ttsManager.speak(q.feedback.numError);
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！只需要把分子相加減即可。";
+                        ttsManager.speak(misconceptionMsg);
                     } else {
-                        ttsManager.speak("分母不對喔！同分母加法中，分母是不變的呢。");
+                        misconceptionType = "denominator_partition";
+                        misconceptionMsg = "分母不對喔！同分母加減法中，分母是不變的呢。";
+                        ttsManager.speak(misconceptionMsg);
                     }
                 }
             } else if (q.type === 'equation-whole') {
@@ -1601,11 +1712,18 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (denAns === q.answer.den1 + q.answer.den2) {
-                        ttsManager.speak(q.feedback.denAddError);
+                        misconceptionType = "denominator_addition";
+                        misconceptionMsg = q.feedback.denAddError || "分母相加了喔！分母維持不變。";
+                        ttsManager.speak(misconceptionMsg);
+                        this.showOverlapComparison(q, numAns, denAns, 'single-interactive-content');
                     } else if (wholeAns !== q.answer.wholeAns && wholeAns !== null) {
-                        ttsManager.speak("後面的整數算錯了喔。當分子和分母一樣大時，它會等於多少呢？");
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = "後面的整數算錯了喔。當分子和分母一樣大時，它會等於多少呢？";
+                        ttsManager.speak(misconceptionMsg);
                     } else {
-                        ttsManager.speak(q.feedback.numError);
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！";
+                        ttsManager.speak(misconceptionMsg);
                     }
                 }
             } else if (q.type === 'equation-convert') {
@@ -1617,11 +1735,18 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (num2 !== q.answer.num2) {
-                        ttsManager.speak(q.feedback.convertError);
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = q.feedback.convertError || "先把整數 1 換成假分數再計算喔！";
+                        ttsManager.speak(misconceptionMsg);
                     } else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) {
-                        ttsManager.speak(q.feedback.denSubError || "減法計算時，分母代表平分的大小，是維持不變的喔！");
+                        misconceptionType = "denominator_subtraction";
+                        misconceptionMsg = q.feedback.denSubError || "減法計算時，分母代表平分的大小，是維持不變的喔！";
+                        ttsManager.speak(misconceptionMsg);
+                        this.showOverlapComparison(q, numAns, denAns, 'single-interactive-content');
                     } else {
-                        ttsManager.speak(q.feedback.numError);
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！";
+                        ttsManager.speak(misconceptionMsg);
                     }
                 }
             } else if (q.type === 'equation-whole-sub') {
@@ -1634,11 +1759,18 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (num1 !== q.answer.num1 || den1 !== q.answer.den1) {
-                        ttsManager.speak(q.feedback.convertError);
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = q.feedback.convertError || "先把整數 1 換成假分數再計算喔！";
+                        ttsManager.speak(misconceptionMsg);
                     } else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) {
-                        ttsManager.speak(q.feedback.denSubError || "減法計算時，分母代表平分的大小，是維持不變的喔！");
+                        misconceptionType = "denominator_subtraction";
+                        misconceptionMsg = q.feedback.denSubError || "減法計算時，分母代表平分的大小，是維持不變的喔！";
+                        ttsManager.speak(misconceptionMsg);
+                        this.showOverlapComparison(q, numAns, denAns, 'single-interactive-content');
                     } else {
-                        ttsManager.speak(q.feedback.numError);
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！";
+                        ttsManager.speak(misconceptionMsg);
                     }
                 }
             } else if (q.type === 'equation-add-to-whole') {
@@ -1650,15 +1782,24 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (denAns === q.answer.den1 + q.answer.den2) {
-                        ttsManager.speak(q.feedback.denAddError);
+                        misconceptionType = "denominator_addition";
+                        misconceptionMsg = q.feedback.denAddError || "分母相加了！分母是不變的喔！";
+                        ttsManager.speak(misconceptionMsg);
+                        this.showOverlapComparison(q, numAns, denAns, 'single-interactive-content');
                     } else if (wholeAns !== q.answer.wholeAns) {
-                        ttsManager.speak("後面的整數算錯了。分子分母一樣大時會等於多少呢？");
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = "後面的整數算錯了。分子分母一樣大時會等於多少呢？";
+                        ttsManager.speak(misconceptionMsg);
                     } else {
-                        ttsManager.speak(q.feedback.numError);
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！";
+                        ttsManager.speak(misconceptionMsg);
                     }
                 }
             }
         }
+
+        const singleFbBar = document.getElementById('single-feedback-bar');
 
         if (isCorrect) {
             soundEffects.playCorrect();
@@ -1668,6 +1809,13 @@ class MagicBakeryApp {
             ttsManager.speak(praises[Math.floor(Math.random() * praises.length)]);
             
             this.singleScore += 10;
+
+            // 顯示文字正向回饋
+            if (singleFbBar) {
+                singleFbBar.innerHTML = `✨ <strong>太棒了！</strong>回答正確！魔力原料調配完美！`;
+                singleFbBar.className = 'ai-feedback-bar success';
+                singleFbBar.classList.remove('hidden');
+            }
             
             // 顯示下一題按鈕
             document.getElementById('btn-single-submit').classList.add('hidden');
@@ -1689,6 +1837,27 @@ class MagicBakeryApp {
             });
         } else {
             soundEffects.playWrong();
+
+            // 記錄迷思概念
+            if (this.sessionMisconceptions && misconceptionType) {
+                if (misconceptionType.includes("denominator")) {
+                    this.sessionMisconceptions.denError = (this.sessionMisconceptions.denError || 0) + 1;
+                } else if (misconceptionType === "whole_convert") {
+                    this.sessionMisconceptions.convert1Error = (this.sessionMisconceptions.convert1Error || 0) + 1;
+                } else if (misconceptionType === "choice_error") {
+                    this.sessionMisconceptions.choiceError = (this.sessionMisconceptions.choiceError || 0) + 1;
+                } else {
+                    this.sessionMisconceptions.numError = (this.sessionMisconceptions.numError || 0) + 1;
+                }
+            }
+
+            // 顯示文字版迷思診斷回饋
+            if (singleFbBar && misconceptionMsg) {
+                singleFbBar.innerHTML = `💡 <strong>烘焙小精靈提示：</strong>${this.formatMathText(misconceptionMsg)}`;
+                singleFbBar.className = 'ai-feedback-bar';
+                singleFbBar.classList.remove('hidden');
+            }
+
             // 震動輸入格效果
             document.getElementById('single-equation-display').animate([
                 { transform: 'translateX(-5px)' },
@@ -1699,22 +1868,24 @@ class MagicBakeryApp {
         }
     }
 
-    // 實作：半透明重疊比對 (對比學童的錯誤分母答案與正確分母的大小)
-    showOverlapComparison(q, userNum, userDen) {
-        const board = document.getElementById('single-interactive-content');
+    // 實作：半透明重疊比對 ＋ 雙軌長條對照卡 (對比學童的錯誤分母答案與正確分母的大小)
+    showOverlapComparison(q, userNum, userDen, containerId = 'single-interactive-content') {
+        const board = document.getElementById(containerId);
         if (!board) return;
 
-        // 如果是圓餅圖表徵
+        const correctTotal = (q.answer && q.answer.denAns) ? q.answer.denAns : (q.answer.den || 8);
+        const correctNum = (q.answer && q.answer.numAns) ? q.answer.numAns : (q.answer.num || 1);
+        const errNum = (!isNaN(userNum) && userNum > 0) ? userNum : correctNum;
+        const errDen = (!isNaN(userDen) && userDen > 0) ? userDen : (correctTotal * 2);
+
+        // 1. 如果有 SVG 圓餅圖，進行半透明雙層疊合
         const svg = board.querySelector('svg');
         if (svg) {
             svg.innerHTML = '';
-            
-            // 1. 先繪製真正的答案 (例如 5/8) - 用綠色
             const cx = 100, cy = 100, r = 85;
-            const correctTotal = q.answer.denAns;
-            const correctNum = q.answer.numAns;
             const correctStep = 360 / correctTotal;
 
+            // 綠色底：正確答案平分
             for (let i = 0; i < correctTotal; i++) {
                 const startAngle = i * correctStep - 90;
                 const endAngle = (i + 1) * correctStep - 90;
@@ -1730,20 +1901,19 @@ class MagicBakeryApp {
                 path.setAttribute('d', dStr);
                 path.setAttribute('stroke', '#333');
                 path.setAttribute('stroke-width', '2px');
-                path.setAttribute('fill', i < correctNum ? 'rgba(142, 182, 122, 0.65)' : 'rgba(255,255,255,0.05)'); // 綠色
+                path.setAttribute('fill', i < correctNum ? 'rgba(142, 182, 122, 0.65)' : 'rgba(255,255,255,0.05)');
                 svg.appendChild(path);
             }
 
-            // 2. 疊加學童的錯誤答案 (例如 5/16) - 用半透明藍色
-            const userStep = 360 / userDen;
-            for (let i = 0; i < userDen; i++) {
-                if (i >= userNum) break; // 只畫有填入的分數
-                
+            // 藍色疊加：錯誤分母平分 (切太小塊)
+            const userStep = 360 / errDen;
+            for (let i = 0; i < errDen; i++) {
+                if (i >= errNum) break;
                 const startAngle = i * userStep - 90;
                 const endAngle = (i + 1) * userStep - 90;
                 const rad1 = (startAngle * Math.PI) / 180;
                 const rad2 = (endAngle * Math.PI) / 180;
-                const x1 = cx + (r * 0.95) * Math.cos(rad1); // 稍微小一圈以便對比
+                const x1 = cx + (r * 0.95) * Math.cos(rad1);
                 const y1 = cy + (r * 0.95) * Math.sin(rad1);
                 const x2 = cx + (r * 0.95) * Math.cos(rad2);
                 const y2 = cy + (r * 0.95) * Math.sin(rad2);
@@ -1753,16 +1923,49 @@ class MagicBakeryApp {
                 path.setAttribute('d', dStr);
                 path.setAttribute('stroke', '#5ec4cd');
                 path.setAttribute('stroke-width', '2px');
-                path.setAttribute('fill', 'rgba(94, 196, 205, 0.7)'); // 藍色
+                path.setAttribute('fill', 'rgba(94, 196, 205, 0.7)');
                 svg.appendChild(path);
             }
         }
+
+        // 2. 雙軌長條對照卡 (所有題型均可展現平分份數與每份大小的直接比較)
+        let oldCard = board.querySelector('.overlap-comparison-card');
+        if (oldCard) oldCard.remove();
+
+        const card = document.createElement('div');
+        card.className = 'overlap-comparison-card';
+
+        let correctSegsHtml = '';
+        for (let i = 0; i < correctTotal; i++) {
+            correctSegsHtml += `<div class="overlap-bar-seg ${i < correctNum ? 'active' : ''}"></div>`;
+        }
+
+        let errorSegsHtml = '';
+        for (let i = 0; i < errDen; i++) {
+            errorSegsHtml += `<div class="overlap-bar-seg ${i < errNum ? 'active error' : ''}"></div>`;
+        }
+
+        card.innerHTML = `
+            <div class="overlap-card-title">🔍 迷思概念視覺對照：平分塊數比一比</div>
+            <div class="overlap-bar-row">
+                <span class="overlap-bar-label">正確平分 (分母不變)：</span>
+                <div class="overlap-bar-track">${correctSegsHtml}</div>
+                <span class="overlap-bar-val">${this.formatMathText(`${correctNum}/${correctTotal}`)}</span>
+            </div>
+            <div class="overlap-bar-row error">
+                <span class="overlap-bar-label">你的錯誤平分 (切太碎了！)：</span>
+                <div class="overlap-bar-track">${errorSegsHtml}</div>
+                <span class="overlap-bar-val">${this.formatMathText(`${errNum}/${errDen}`)}</span>
+            </div>
+            <div class="overlap-explainer">💡 注意看：分母變大，每一份就切得更小塊了！同分母加減每份大小不變，分母不能相加減喔！</div>
+        `;
+        board.appendChild(card);
     }
 
     // 更新互動區 (當在鍵盤打字時)
-    updateInteractiveVisual(q, num, den) {
+    updateInteractiveVisual(q, num, den, containerId = 'single-interactive-content') {
         const type = q.visual.interactiveType;
-        const board = document.getElementById('single-interactive-content');
+        const board = document.getElementById(containerId);
         if (!board) return;
 
         if (type === 'pie' || type === 'pie-add' || type === 'pie-sub') {
@@ -1809,6 +2012,7 @@ class MagicBakeryApp {
             <div class="stat-item"><span>挑戰關卡：</span><span class="stat-val">第 ${this.selectedSingleLevel} 關</span></div>
             <div class="stat-item"><span>榮譽積分：</span><span class="stat-val">${this.singleScore} 分</span></div>
             <div class="stat-item"><span>烘焙稱號：</span><span class="stat-val">魔法烘焙學徒 ✨</span></div>
+            ${this.getDiagnosticSummaryHtml()}
         `;
         
         ttsManager.speak(`恭喜你完成了第 ${this.selectedSingleLevel} 關的修練！你獲得了 ${this.singleScore} 分呢。`);
@@ -1970,33 +2174,12 @@ class MagicBakeryApp {
         display.innerHTML = '';
         
         const prefix = `p${playerNum}`;
-
-        // 雙人對戰只使用分數/算式輸入，不使用文字選擇題
-        display.appendChild(this.createStaticFrac(q.answer.num1, q.answer.den1));
-        
-        const symbol = document.createElement('span');
-        symbol.className = 'symbol';
-        symbol.style.fontSize = '1.3rem';
-        symbol.innerText = q.initialEq.includes('+') ? '+' : '-';
-        display.appendChild(symbol);
-        
-        display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
-        
-        const eqSymbol = document.createElement('span');
-        eqSymbol.className = 'symbol';
-        eqSymbol.style.fontSize = '1.3rem';
-        eqSymbol.innerText = '=';
-        display.appendChild(eqSymbol);
-        
-        // 分數答題框
         const inputId = `${prefix}-fans`;
-        const fracBox = this.createFracInputBox(inputId);
-        display.appendChild(fracBox);
 
-        // 如果是 1 減分數的算式 (4_1 等)
-        if (q.type === 'equation-whole-sub') {
-            display.innerHTML = '';
-            
+        // 雙人對戰全題型相容防呆：
+        if (q.type === 'fraction-input') {
+            display.appendChild(this.createFracInputBox(inputId));
+        } else if (q.type === 'equation-whole-sub') {
             const wholeSymbol = document.createElement('span');
             wholeSymbol.className = 'symbol';
             wholeSymbol.innerText = '1';
@@ -2007,14 +2190,39 @@ class MagicBakeryApp {
             symbol.innerText = '-';
             display.appendChild(symbol);
             
-            display.appendChild(this.createStaticFrac(q.answer.num2, q.answer.den2));
+            const num2 = q.answer.num2 !== undefined ? q.answer.num2 : 1;
+            const den2 = q.answer.den2 !== undefined ? q.answer.den2 : (q.answer.denAns || 8);
+            display.appendChild(this.createStaticFrac(num2, den2));
             
             const eqSymbol = document.createElement('span');
             eqSymbol.className = 'symbol';
             eqSymbol.innerText = '=';
             display.appendChild(eqSymbol);
             
-            // 直接簡化對戰作答為最終的分數
+            display.appendChild(this.createFracInputBox(inputId));
+        } else {
+            const num1 = q.answer.num1 !== undefined ? q.answer.num1 : (q.answer.numAns || 1);
+            const den1 = q.answer.den1 !== undefined ? q.answer.den1 : (q.answer.denAns || 8);
+            const num2 = q.answer.num2 !== undefined ? q.answer.num2 : 1;
+            const den2 = q.answer.den2 !== undefined ? q.answer.den2 : den1;
+            const isSub = (q.initialEq && q.initialEq.includes('-')) || (q.type && q.type.includes('sub'));
+
+            display.appendChild(this.createStaticFrac(num1, den1));
+            
+            const symbol = document.createElement('span');
+            symbol.className = 'symbol';
+            symbol.style.fontSize = '1.3rem';
+            symbol.innerText = isSub ? '-' : '+';
+            display.appendChild(symbol);
+            
+            display.appendChild(this.createStaticFrac(num2, den2));
+            
+            const eqSymbol = document.createElement('span');
+            eqSymbol.className = 'symbol';
+            eqSymbol.style.fontSize = '1.3rem';
+            eqSymbol.innerText = '=';
+            display.appendChild(eqSymbol);
+            
             display.appendChild(this.createFracInputBox(inputId));
         }
 
@@ -2033,14 +2241,14 @@ class MagicBakeryApp {
                 
                 // 即時更新視覺
                 let numVal = parseInt(display.querySelector('.frac-input-num').innerText) || 0;
-                let denVal = parseInt(display.querySelector('.frac-input-den').innerText) || q.visual.totalSlices || q.visual.totalItems;
+                let denVal = parseInt(display.querySelector('.frac-input-den').innerText) || (q.visual && q.visual.totalSlices) || 8;
                 const svg = document.getElementById(`${prefix}-svg-pie`);
                 if (svg) {
                     this.drawPieSvg(svg, denVal, numVal);
                 }
             } else if (val === '確認') {
-                // 自動換格
-                const cells = Array.from(display.querySelectorAll('.frac-input-num, .frac-input-den'));
+                // 自動換格 (先分母、後分子順序)
+                const cells = this.getOrderedInputCells(display);
                 const curIdx = cells.indexOf(activeCell);
                 const nextCell = cells[(curIdx + 1) % cells.length];
                 this.activatePlayerInputCell(playerNum, nextCell);
@@ -2057,7 +2265,7 @@ class MagicBakeryApp {
                 
                 // 即時更新視覺
                 let numVal = parseInt(display.querySelector('.frac-input-num').innerText) || 0;
-                let denVal = parseInt(display.querySelector('.frac-input-den').innerText) || q.visual.totalSlices || q.visual.totalItems;
+                let denVal = parseInt(display.querySelector('.frac-input-den').innerText) || (q.visual && q.visual.totalSlices) || 8;
                 const svg = document.getElementById(`${prefix}-svg-pie`);
                 if (svg) {
                     this.drawPieSvg(svg, denVal, numVal);
@@ -2065,10 +2273,10 @@ class MagicBakeryApp {
             }
         });
 
-        // 預設高亮第一個輸入格
-        const firstInput = display.querySelector('.frac-input-num');
-        if (firstInput) {
-            this.activatePlayerInputCell(playerNum, firstInput);
+        // 預設高亮第一個輸入格 (先分母、後分子)
+        const orderedCells = this.getOrderedInputCells(display);
+        if (orderedCells.length > 0) {
+            this.activatePlayerInputCell(playerNum, orderedCells[0]);
         }
     }
 
@@ -2102,9 +2310,9 @@ class MagicBakeryApp {
         svg.id = `${prefix}-svg-pie`;
         container.appendChild(svg);
 
-        // 畫出原本已有的片數
-        const total = q.visual.totalSlices || q.visual.totalItems;
-        const initial = q.visual.initialSlices || q.visual.initialItems;
+        // 畫出原本已有的片數 (相容無 visual 屬性的題型)
+        const total = (q.visual && (q.visual.totalSlices || q.visual.totalItems)) || (q.answer && (q.answer.denAns || q.answer.den || 8));
+        const initial = (q.visual && (q.visual.initialSlices || q.visual.initialItems)) || (q.answer && (q.answer.numAns || q.answer.num || 1));
         this.drawPieSvg(svg, total, initial);
     }
 
@@ -2183,8 +2391,8 @@ class MagicBakeryApp {
         const numAns = parseInt(numCell.innerText);
         const denAns = parseInt(denCell.innerText);
 
-        let targetNumAns = q.answer.numAns;
-        let targetDenAns = q.answer.denAns;
+        let targetNumAns = q.answer.numAns !== undefined ? q.answer.numAns : q.answer.num;
+        let targetDenAns = q.answer.denAns !== undefined ? q.answer.denAns : q.answer.den;
 
         // 如果是 1 減分數
         if (q.type === 'equation-whole-sub') {
@@ -2308,6 +2516,7 @@ class MagicBakeryApp {
 
     startAiChallenge() {
         this.cleanupAiChallenge();
+        this.resetSessionMisconceptions();
 
         // 依難度設定參數
         const diffConfigs = {
@@ -2431,9 +2640,17 @@ class MagicBakeryApp {
         const btnSubmit = document.getElementById('btn-ai-submit');
         const btnNext = document.getElementById('btn-ai-next');
         const feedbackBar = document.getElementById('ai-feedback-bar');
-        if (btnSubmit) btnSubmit.classList.remove('hidden');
-        if (btnNext) btnNext.classList.add('hidden');
-        if (feedbackBar) feedbackBar.classList.add('hidden');
+        if (btnSubmit) {
+            btnSubmit.innerText = '投入原料充能 🔮';
+            btnSubmit.classList.remove('hidden');
+        }
+        if (btnNext) {
+            btnNext.innerText = '跳過下一題 ➔';
+            btnNext.classList.add('hidden');
+        }
+        if (feedbackBar) {
+            feedbackBar.className = 'ai-feedback-bar hidden';
+        }
 
         // 渲染作答區與互動操作區
         this.renderAiWorkspace(q);
@@ -2462,7 +2679,7 @@ class MagicBakeryApp {
 
             q.options.forEach(opt => {
                 const optBtn = document.createElement('button');
-                optBtn.className = 'opt-btnChoice';
+                optBtn.className = 'opt-btnChoice opt-btn';
                 optBtn.innerHTML = this.formatMathText(opt);
                 optBtn.setAttribute('data-val', opt);
                 
@@ -2572,10 +2789,10 @@ class MagicBakeryApp {
             this.renderKeyboard('ai-keyboard', (val) => this.handleAiKeyboardInput(val));
         }
 
-        // 預設高亮第一個未填寫輸入格
-        const firstInput = display.querySelector('.frac-input-num, .frac-input-den, .whole-input-box');
-        if (firstInput) {
-            this.activateAiInputCell(firstInput);
+        // 預設高亮第一個未填寫輸入格 (先分母、後分子順序)
+        const orderedCells = this.getOrderedInputCells(display);
+        if (orderedCells.length > 0) {
+            this.activateAiInputCell(orderedCells[0]);
         }
     }
 
@@ -2613,7 +2830,9 @@ class MagicBakeryApp {
     }
 
     autoAdvanceAiInputFocus() {
-        const inputs = Array.from(document.querySelectorAll('#ai-equation-display .frac-input-num, #ai-equation-display .frac-input-den, #ai-equation-display .whole-input-box'));
+        const display = document.getElementById('ai-equation-display');
+        if (!display) return;
+        const inputs = this.getOrderedInputCells(display);
         const currentIdx = inputs.indexOf(this.aiActiveInputCell);
 
         for (let i = 1; i <= inputs.length; i++) {
@@ -2649,6 +2868,7 @@ class MagicBakeryApp {
         const q = this.aiQuestions[this.aiCurrentQuestionIdx % this.aiQuestions.length];
         let isCorrect = false;
         let misconceptionMsg = "";
+        let misconceptionType = null;
 
         // 1. 選擇題檢驗
         if (q.type === 'choice') {
@@ -2662,6 +2882,7 @@ class MagicBakeryApp {
             if (selectedVal === q.answer) {
                 isCorrect = true;
             } else {
+                misconceptionType = "choice_error";
                 misconceptionMsg = (q.feedback && q.feedback.wrongChoices && q.feedback.wrongChoices[selectedVal]) 
                     ? q.feedback.wrongChoices[selectedVal] 
                     : "選擇的答案不正確喔，請再觀察題目想想看！";
@@ -2687,8 +2908,13 @@ class MagicBakeryApp {
                 if (inputs['ai-f1-num'] === q.answer.num && inputs['ai-f1-den'] === q.answer.den) {
                     isCorrect = true;
                 } else {
-                    if (inputs['ai-f1-num'] !== q.answer.num) misconceptionMsg = q.feedback.wrongNum;
-                    else misconceptionMsg = q.feedback.wrongDen;
+                    if (inputs['ai-f1-num'] !== q.answer.num) {
+                        misconceptionType = "numerator_count";
+                        misconceptionMsg = q.feedback.wrongNum;
+                    } else {
+                        misconceptionType = "denominator_partition";
+                        misconceptionMsg = q.feedback.wrongDen;
+                    }
                 }
             } else if (q.type === 'equation') {
                 const numAns = inputs['ai-fans-num'];
@@ -2697,10 +2923,18 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (denAns === q.answer.den1 + q.answer.den2) {
+                        misconceptionType = "denominator_addition";
                         misconceptionMsg = q.feedback.denAddError || "分母相加了！同分母加法中，分母代表平分的份數，是不變的喔！";
+                        this.showOverlapComparison(q, numAns, denAns, 'ai-interactive-content');
+                    } else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) {
+                        misconceptionType = "denominator_subtraction";
+                        misconceptionMsg = q.feedback.denSubError || "減法計算時，分母是維持不變的喔！";
+                        this.showOverlapComparison(q, numAns, denAns, 'ai-interactive-content');
                     } else if (numAns !== q.answer.numAns) {
+                        misconceptionType = "numerator_calc";
                         misconceptionMsg = q.feedback.numError || "分子計算錯誤囉！只需將分子相加即可。";
                     } else {
+                        misconceptionType = "denominator_partition";
                         misconceptionMsg = "分母不對喔！同分母加法中，分母是不變的呢。";
                     }
                 }
@@ -2712,10 +2946,14 @@ class MagicBakeryApp {
                     isCorrect = true;
                 } else {
                     if (denAns === q.answer.den1 + q.answer.den2) {
+                        misconceptionType = "denominator_addition";
                         misconceptionMsg = q.feedback.denAddError || "分母相加了喔！分母維持不變。";
+                        this.showOverlapComparison(q, numAns, denAns, 'ai-interactive-content');
                     } else if (wholeAns !== q.answer.wholeAns && wholeAns !== null) {
+                        misconceptionType = "whole_convert";
                         misconceptionMsg = "後面的整數算錯了喔。當分子和分母一樣大時，它會等於整數 1 呢。";
                     } else {
+                        misconceptionType = "numerator_calc";
                         misconceptionMsg = q.feedback.numError || "分子計算錯誤喔！";
                     }
                 }
@@ -2726,9 +2964,17 @@ class MagicBakeryApp {
                 if (num2 === q.answer.num2 && numAns === q.answer.numAns && denAns === q.answer.denAns) {
                     isCorrect = true;
                 } else {
-                    if (num2 !== q.answer.num2) misconceptionMsg = q.feedback.convertError;
-                    else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) misconceptionMsg = q.feedback.denSubError || "減法計算時，分母是維持不變的喔！";
-                    else misconceptionMsg = q.feedback.numError;
+                    if (num2 !== q.answer.num2) {
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = q.feedback.convertError;
+                    } else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) {
+                        misconceptionType = "denominator_subtraction";
+                        misconceptionMsg = q.feedback.denSubError || "減法計算時，分母是維持不變的喔！";
+                        this.showOverlapComparison(q, numAns, denAns, 'ai-interactive-content');
+                    } else {
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError;
+                    }
                 }
             } else if (q.type === 'equation-whole-sub') {
                 const num1 = inputs['ai-f1-num'];
@@ -2738,9 +2984,17 @@ class MagicBakeryApp {
                 if (num1 === q.answer.num1 && den1 === q.answer.den1 && numAns === q.answer.numAns && denAns === q.answer.denAns) {
                     isCorrect = true;
                 } else {
-                    if (num1 !== q.answer.num1 || den1 !== q.answer.den1) misconceptionMsg = q.feedback.convertError;
-                    else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) misconceptionMsg = q.feedback.denSubError || "減法計算時，分母維持不變喔！";
-                    else misconceptionMsg = q.feedback.numError;
+                    if (num1 !== q.answer.num1 || den1 !== q.answer.den1) {
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = q.feedback.convertError;
+                    } else if (denAns === q.answer.den1 - q.answer.den2 || denAns === 0) {
+                        misconceptionType = "denominator_subtraction";
+                        misconceptionMsg = q.feedback.denSubError || "減法計算時，分母維持不變喔！";
+                        this.showOverlapComparison(q, numAns, denAns, 'ai-interactive-content');
+                    } else {
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError;
+                    }
                 }
             } else if (q.type === 'equation-add-to-whole') {
                 const numAns = inputs['ai-fans-num'];
@@ -2749,9 +3003,17 @@ class MagicBakeryApp {
                 if (numAns === q.answer.numAns && denAns === q.answer.denAns && wholeAns === q.answer.wholeAns) {
                     isCorrect = true;
                 } else {
-                    if (denAns === q.answer.den1 + q.answer.den2) misconceptionMsg = q.feedback.denAddError;
-                    else if (wholeAns !== q.answer.wholeAns) misconceptionMsg = "後面的整數算錯了喔！分子分母相等時等於 1 呢。";
-                    else misconceptionMsg = q.feedback.numError;
+                    if (denAns === q.answer.den1 + q.answer.den2) {
+                        misconceptionType = "denominator_addition";
+                        misconceptionMsg = q.feedback.denAddError;
+                        this.showOverlapComparison(q, numAns, denAns, 'ai-interactive-content');
+                    } else if (wholeAns !== q.answer.wholeAns) {
+                        misconceptionType = "whole_convert";
+                        misconceptionMsg = "後面的整數算錯了喔！分子分母相等時等於 1 呢。";
+                    } else {
+                        misconceptionType = "numerator_calc";
+                        misconceptionMsg = q.feedback.numError;
+                    }
                 }
             }
         }
@@ -2760,6 +3022,10 @@ class MagicBakeryApp {
         if (isCorrect) {
             soundEffects.playCorrect();
             soundEffects.playCharge();
+
+            // 若之前觸發了安全閥，此處答對即時解除！
+            this.pauseAiSafetyValve(false);
+
             this.aiCorrectCount++;
             this.aiTotalAnswered++;
             this.playerCombo++;
@@ -2787,6 +3053,14 @@ class MagicBakeryApp {
             this.playerEnergy = Math.min(100, this.playerEnergy + energyGain);
             this.updateAiDashboardUI();
 
+            // 顯示成功文字回饋
+            const feedbackBar = document.getElementById('ai-feedback-bar');
+            if (feedbackBar) {
+                feedbackBar.innerHTML = `✨ <strong>太棒了！</strong>回答正確！魔力充能成功！`;
+                feedbackBar.className = 'ai-feedback-bar success';
+                feedbackBar.classList.remove('hidden');
+            }
+
             // 檢查玩家勝利
             if (this.playerEnergy >= 100) {
                 this.finishAiChallenge(true);
@@ -2808,19 +3082,32 @@ class MagicBakeryApp {
             }, 800);
         }
 
-        // ================= 答錯處理 (觸發教學安全閥) =================
+        // ================= 答錯處理 (觸發教學安全閥 ＋ 支援原地修正重送) =================
         else {
             soundEffects.playWrong();
             this.aiTotalAnswered++;
             this.playerCombo = 0;
 
+            if (this.sessionMisconceptions && misconceptionType) {
+                if (misconceptionType.includes("denominator")) {
+                    this.sessionMisconceptions.denError = (this.sessionMisconceptions.denError || 0) + 1;
+                } else if (misconceptionType === "whole_convert") {
+                    this.sessionMisconceptions.convert1Error = (this.sessionMisconceptions.convert1Error || 0) + 1;
+                } else if (misconceptionType === "choice_error") {
+                    this.sessionMisconceptions.choiceError = (this.sessionMisconceptions.choiceError || 0) + 1;
+                } else {
+                    this.sessionMisconceptions.numError = (this.sessionMisconceptions.numError || 0) + 1;
+                }
+            }
+
             const comboBadge = document.getElementById('player-combo-badge');
             if (comboBadge) comboBadge.classList.add('hidden');
 
-            // 顯示迷思診斷回饋橫條
+            // 顯示迷思診斷回饋橫條 (所有分數轉直式)
             const feedbackBar = document.getElementById('ai-feedback-bar');
             if (feedbackBar) {
-                feedbackBar.innerHTML = `💡 <strong>烘焙小精靈提示：</strong>${misconceptionMsg}`;
+                feedbackBar.innerHTML = `💡 <strong>烘焙小精靈提示：</strong>${this.formatMathText(misconceptionMsg)}`;
+                feedbackBar.className = 'ai-feedback-bar';
                 feedbackBar.classList.remove('hidden');
             }
 
@@ -2828,11 +3115,17 @@ class MagicBakeryApp {
             this.pauseAiSafetyValve(true);
             ttsManager.speak(misconceptionMsg);
 
-            // 切換按鈕為「下一題」
+            // 支援原地修正重送閉環：保留修正重送按鈕，並同時提供跳過下一題按鈕
             const btnSubmit = document.getElementById('btn-ai-submit');
             const btnNext = document.getElementById('btn-ai-next');
-            if (btnSubmit) btnSubmit.classList.add('hidden');
-            if (btnNext) btnNext.classList.remove('hidden');
+            if (btnSubmit) {
+                btnSubmit.innerText = '修正重送 🔮';
+                btnSubmit.classList.remove('hidden');
+            }
+            if (btnNext) {
+                btnNext.innerText = '跳過下一題 ➔';
+                btnNext.classList.remove('hidden');
+            }
         }
     }
 
@@ -3050,6 +3343,7 @@ class MagicBakeryApp {
             <div class="stat-item"><span>挑戰難度：</span><span class="stat-val">${this.aiDifficulty === 'easy' ? '⭐ 見習學徒' : this.aiDifficulty === 'normal' ? '⭐⭐ 熟練師傅' : '⭐⭐⭐ 傳奇主廚'}</span></div>
             <div class="stat-item"><span>烘焙稱號：</span><span class="stat-val" style="color: var(--accent-strawberry); font-weight: bold;">${titleBadge}</span></div>
             <div class="stat-item"><span>挑戰用時：</span><span class="stat-val">${elapsedSec} 秒</span></div>
+            ${this.getDiagnosticSummaryHtml()}
         `;
 
         this.showScreen('screen-result');

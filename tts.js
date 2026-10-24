@@ -66,12 +66,14 @@ class TtsManager {
 
         // 3. 檢查句尾是否有防吞字緩衝助詞，若沒有且是問句或感嘆句，則加上
         // 主要是防範 Windows / iOS 句尾吃字
-        if (result.endsWith('呢') || result.endsWith('嗎') || result.endsWith('呀') || result.endsWith('喔')) {
-            // 已有助詞，不用加
+        if (/[呢嗎呀喔吧囉][？\?！!。\.]?$/.test(result)) {
+            // 已有語氣助詞，不用重複添加
         } else if (result.endsWith('？') || result.endsWith('?')) {
             result = result.slice(0, -1) + '呢？';
         } else if (result.endsWith('！') || result.endsWith('!')) {
             result = result.slice(0, -1) + '呀！';
+        } else if (result.endsWith('。') || result.endsWith('.')) {
+            result = result.slice(0, -1) + '呢。';
         } else {
             result = result + '呢。';
         }

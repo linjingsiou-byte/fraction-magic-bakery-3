@@ -2319,18 +2319,103 @@ button {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* AI 答錯/回饋小提示橫條 */
+/* 答錯/鼓勵回饋小提示橫條 */
 .ai-feedback-bar {
-    background: rgba(42, 27, 23, 0.9);
+    background: rgba(42, 27, 23, 0.92);
     border-left: 4px solid var(--accent-gold);
     border-radius: 8px;
     padding: 10px 14px;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: var(--color-text);
     margin-top: 10px;
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 .ai-feedback-bar.warning {
     border-left-color: var(--accent-strawberry);
+    background: rgba(65, 25, 25, 0.92);
 }
+
+.ai-feedback-bar.success {
+    border-left-color: var(--accent-matcha);
+    background: rgba(30, 52, 35, 0.92);
+}
+
+/* 分母相加減迷思：雙軌長條對照視覺卡 */
+.overlap-comparison-card {
+    width: 92%;
+    background: rgba(25, 16, 13, 0.92);
+    border: 2px dashed var(--accent-gold);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: bannerPop 0.35s ease-out;
+}
+
+.overlap-card-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--accent-gold);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.overlap-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.overlap-bar-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.overlap-bar-track {
+    width: 100%;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    display: flex;
+    overflow: hidden;
+}
+
+.overlap-bar-seg {
+    flex: 1;
+    height: 100%;
+    border-right: 1px dashed rgba(255, 255, 255, 0.28);
+}
+
+.overlap-bar-seg:last-child {
+    border-right: none;
+}
+
+.overlap-bar-seg.correct-fill {
+    background: rgba(142, 182, 122, 0.85);
+}
+
+.overlap-bar-seg.wrong-fill {
+    background: rgba(56, 189, 248, 0.75);
+}
+
+/* 結算畫面：學習診斷小卡 */
+.diagnostic-summary-box {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(229, 169, 60, 0.12);
+    border: 1.5px solid var(--accent-gold);
+    text-align: left;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+

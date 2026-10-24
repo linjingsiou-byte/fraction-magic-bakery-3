@@ -17,6 +17,9 @@ const SCREENSHOT_DIR = "C:\\Users\\user\\.gemini\\antigravity\\brain\\8b0c62c4-a
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 850 });
 
+    page.on('pageerror', err => console.log('[BROWSER PAGE ERROR]', err.message, err.stack));
+    page.on('console', msg => console.log('[BROWSER CONSOLE]', msg.type(), msg.text()));
+
     console.log(`[AI-TEST] Loading page: ${HTML_PATH}`);
     await page.goto(HTML_PATH, { waitUntil: 'domcontentloaded' });
     await new Promise(r => setTimeout(r, 1000));
@@ -65,33 +68,42 @@ const SCREENSHOT_DIR = "C:\\Users\\user\\.gemini\\antigravity\\brain\\8b0c62c4-a
 
     // 4. 測試教學安全閥：刻意答錯
     console.log("[AI-TEST] Testing Misconception Feedback & Safety Valve on wrong answer...");
-    await page.evaluate(() => {
-        // 若當前是選擇題，選一個錯誤選項或若是算式題填錯
+    const debugInfo = await page.evaluate(() => {
         const q = window.app.aiQuestions[window.app.aiCurrentQuestionIdx % window.app.aiQuestions.length];
+        let wrongChosen = null;
         if (q.type === 'choice') {
             const wrongOpt = Array.from(document.querySelectorAll('#ai-equation-display .opt-btnChoice'))
                 .find(b => (b.getAttribute('data-val') || b.innerText.trim()) !== q.answer);
-            if (wrongOpt) wrongOpt.click();
+            if (wrongOpt) {
+                wrongOpt.click();
+                wrongChosen = wrongOpt.innerText.trim();
+            }
         } else {
-            // 填入錯誤的答案 99
-            const numCell = document.querySelector('#ai-equation-display .frac-input-num');
-            const denCell = document.querySelector('#ai-equation-display .frac-input-den');
-            if (numCell) numCell.innerText = '99';
-            if (denCell) denCell.innerText = '99';
+            document.querySelectorAll('#ai-equation-display .frac-input-num, #ai-equation-display .frac-input-den, #ai-equation-display .whole-input-box').forEach(el => {
+                if (el.innerText === '?') el.innerText = '99';
+            });
         }
+        const unfilled = Array.from(document.querySelectorAll('#ai-equation-display .frac-input-num, #ai-equation-display .frac-input-den, #ai-equation-display .whole-input-box')).some(el => el.innerText === '?');
+        return {
+            type: q.type,
+            text: q.text,
+            wrongChosen,
+            unfilled,
+            activeChoice: document.querySelector('#ai-equation-display .opt-btnChoice.active')?.innerText
+        };
     });
-
     await page.click('#btn-ai-submit');
     await new Promise(r => setTimeout(r, 600));
 
-    // 驗證回饋條與安全閥提示
+    // 驗證回饋條、安全閥提示、AI 思考暫停、修正重送按鈕與下一題按鈕
     const feedbackVisible = await page.$eval('#ai-feedback-bar', el => !el.classList.contains('hidden'));
     const safetyHintVisible = await page.$eval('#ai-safety-hint', el => !el.classList.contains('hidden'));
     const isPaused = await page.evaluate(() => window.app.aiIsPaused);
     const nextBtnVisible = await page.$eval('#btn-ai-next', el => !el.classList.contains('hidden'));
+    const submitBtnText = await page.$eval('#btn-ai-submit', el => el.innerText);
 
-    if (!feedbackVisible || !safetyHintVisible || !isPaused || !nextBtnVisible) {
-        throw new Error(`Safety valve failed: feedback=${feedbackVisible}, safetyHint=${safetyHintVisible}, isPaused=${isPaused}, nextBtn=${nextBtnVisible}`);
+    if (!feedbackVisible || !safetyHintVisible || !isPaused || !nextBtnVisible || !submitBtnText.includes('修正重送')) {
+        throw new Error(`Safety valve failed: feedback=${feedbackVisible}, safetyHint=${safetyHintVisible}, isPaused=${isPaused}, nextBtn=${nextBtnVisible}, submitText=${submitBtnText}`);
     }
     console.log("✔ Misconception feedback shown and Safety Valve paused AI thinking timer.");
 
