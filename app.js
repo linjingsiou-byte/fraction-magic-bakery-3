@@ -1239,9 +1239,18 @@ class MagicBakeryApp {
             container.appendChild(wrapper);
         }
 
-        // 3. 第二關：圓餅加法烤爐 (加法)
-        else if (type === 'pie-add' || type === 'bread-add' || type === 'ribbon-add' || type === 'discrete-add') {
-            this.renderAddInteractive(container, q, 0, prefix); // 初始填寫追加數為0
+        // 3. 第二關：加法視覺渲染 (依題幹情境精準呈現對應視覺模型)
+        else if (type === 'ribbon-add' || type === 'ribbon-add-whole') {
+            this.renderRibbonAddInteractive(container, q, prefix);
+        }
+        else if (type === 'discrete-add') {
+            this.renderDiscreteAddInteractive(container, q, prefix);
+        }
+        else if (type === 'pie-add') {
+            this.renderPieAddInteractive(container, q, prefix);
+        }
+        else if (type === 'bread-add') {
+            this.renderAddInteractive(container, q, 0, prefix);
         }
 
         // 4. 第三關：減法老鼠與點心盒 (減法)
@@ -1250,7 +1259,7 @@ class MagicBakeryApp {
         }
 
         // 5. 第四關：整數 1 減分數彩帶剪切
-        else if (type === 'ribbon-cut' || type === 'bread-cut' || type === 'discrete-cut' || type === 'ribbon-add-whole') {
+        else if (type === 'ribbon-cut' || type === 'bread-cut' || type === 'discrete-cut') {
             this.renderCutInteractive(container, q, prefix);
         }
     }
@@ -1306,7 +1315,271 @@ class MagicBakeryApp {
         }
     }
 
-    // 第二關：加法動態渲染
+    // 第二關專屬：雙色彩帶加法拼接 (ribbon-add)
+    renderRibbonAddInteractive(container, q, prefix = 'single') {
+        container.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'ribbon-container';
+        wrapper.style.width = '95%';
+        wrapper.style.height = '100%';
+        wrapper.style.justifyContent = 'center';
+        wrapper.style.gap = '18px';
+
+        const total = q.visual.totalSlices || (q.answer && q.answer.den1) || 10;
+        const initial = q.visual.initialSlices || (q.answer && q.answer.num1) || 0;
+        const add = q.visual.addSlices || (q.answer && q.answer.num2) || 0;
+
+        // 雙色彩帶圖例標籤 (紅彩帶 + 藍彩帶/綠彩帶)
+        let color1Name = '紅彩帶';
+        let color2Name = '藍彩帶';
+        let color2Bg = '#339af0'; // 天空藍
+        if (q.text.includes('綠彩帶')) {
+            color2Name = '綠彩帶';
+            color2Bg = '#51cf66'; // 抹茶綠
+        }
+
+        const legend = document.createElement('div');
+        legend.style.display = 'flex';
+        legend.style.justifyContent = 'space-around';
+        legend.style.width = '100%';
+        legend.style.fontSize = '0.95rem';
+        legend.style.fontWeight = '700';
+
+        legend.innerHTML = `
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="display:inline-block; width:14px; height:14px; background:var(--accent-strawberry); border-radius:3px;"></span>
+                <span>${color1Name} (長 <span class="fraction inline-frac"><span class="num-row"><span>${initial}</span></span><span class="den-row"><span>${total}</span></span></span> 公尺)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span style="display:inline-block; width:14px; height:14px; background:${color2Bg}; border-radius:3px;"></span>
+                <span>${color2Name} (長 <span class="fraction inline-frac"><span class="num-row"><span>${add}</span></span><span class="den-row"><span>${total}</span></span></span> 公尺)</span>
+            </div>
+        `;
+        wrapper.appendChild(legend);
+
+        // 彩帶拼接軌道
+        const track = document.createElement('div');
+        track.className = 'ribbon-track';
+        track.style.height = '52px';
+        track.style.borderRadius = '10px';
+        track.style.border = '2px solid var(--border-color)';
+
+        for (let i = 0; i < total; i++) {
+            const seg = document.createElement('div');
+            seg.className = 'ribbon-segment';
+            seg.style.display = 'flex';
+            seg.style.alignItems = 'center';
+            seg.style.justifyContent = 'center';
+            seg.style.fontSize = '0.9rem';
+
+            if (i < initial) {
+                // 第一部分：紅彩帶 (全部顯示圖示！)
+                seg.style.backgroundColor = 'var(--accent-strawberry)';
+                seg.innerHTML = `<span>🎀</span>`;
+                seg.title = `第 ${i + 1} 份紅彩帶`;
+            } else if (i < initial + add) {
+                // 第二部分：藍/綠彩帶 (全部顯示圖示！)
+                seg.style.backgroundColor = color2Bg;
+                seg.innerHTML = `<span>🎀</span>`;
+                seg.title = `第 ${i + 1} 份${color2Name}`;
+            } else {
+                // 剩餘部分
+                seg.style.backgroundColor = 'rgba(255,255,255,0.04)';
+            }
+            track.appendChild(seg);
+        }
+        wrapper.appendChild(track);
+
+        // 底部總和說明小卡
+        const infoCard = document.createElement('div');
+        infoCard.style.padding = '10px 18px';
+        infoCard.style.background = 'rgba(0,0,0,0.3)';
+        infoCard.style.borderRadius = '14px';
+        infoCard.style.border = '1px solid var(--accent-gold)';
+        infoCard.style.textAlign = 'center';
+        infoCard.style.fontWeight = '700';
+        infoCard.style.fontSize = '1.05rem';
+        infoCard.innerHTML = `✨ 兩條彩帶接在一起，總共是 <span class="fraction inline-frac"><span class="num-row"><span>${initial + add}</span></span><span class="den-row"><span>${total}</span></span></span> 公尺彩帶！`;
+        wrapper.appendChild(infoCard);
+
+        container.appendChild(wrapper);
+    }
+
+    // 第二關專屬：盒裝離散點心加法 (discrete-add)
+    renderDiscreteAddInteractive(container, q, prefix = 'single') {
+        container.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'box-container';
+        wrapper.style.width = '95%';
+        wrapper.style.height = '100%';
+        wrapper.style.justifyContent = 'center';
+        wrapper.style.gap = '15px';
+
+        const total = q.visual.totalItems || (q.answer && q.answer.den1) || 10;
+        const initial = q.visual.initialItems || (q.answer && q.answer.num1) || 0;
+        const add = q.visual.addItems || (q.answer && q.answer.num2) || 0;
+        const text = q.text || '';
+
+        // 判斷兩組點心的名稱與 Emoji
+        let icon1 = '🍪';
+        let icon2 = '🍪';
+        let name1 = '第一種';
+        let name2 = '第二種';
+        let bg1 = '#e5a93c';
+        let bg2 = '#ff6b6b';
+
+        if (text.includes('草莓餅乾') && text.includes('巧克力餅乾')) {
+            icon1 = '🍓';
+            icon2 = '🍫';
+            name1 = '草莓餅乾';
+            name2 = '巧克力餅乾';
+            bg1 = '#ff6b6b';
+            bg2 = '#8d6e63';
+        } else if (text.includes('甜甜圈')) {
+            icon1 = '🍩';
+            icon2 = '🍩';
+            name1 = '小華買的';
+            name2 = '小英買的';
+            bg1 = '#f1bf64';
+            bg2 = '#ff8787';
+        } else if (text.includes('果凍')) {
+            icon1 = '🍮';
+            icon2 = '🍮';
+            name1 = '小麗拿的';
+            name2 = '小明拿的';
+            bg1 = '#fcc419';
+            bg2 = '#20c997';
+        }
+
+        // 圖例標籤
+        const legend = document.createElement('div');
+        legend.style.display = 'flex';
+        legend.style.justifyContent = 'space-around';
+        legend.style.width = '100%';
+        legend.style.fontSize = '0.95rem';
+        legend.style.fontWeight = '700';
+        legend.innerHTML = `
+            <div>${icon1} ${name1}：<span class="fraction inline-frac"><span class="num-row"><span>${initial}</span></span><span class="den-row"><span>${total}</span></span></span> 盒</div>
+            <div>${icon2} ${name2}：<span class="fraction inline-frac"><span class="num-row"><span>${add}</span></span><span class="den-row"><span>${total}</span></span></span> 盒</div>
+        `;
+        wrapper.appendChild(legend);
+
+        // 點心盒 Grid
+        const grid = document.createElement('div');
+        grid.className = 'cookie-box-grid';
+        grid.style.marginTop = '5px';
+
+        const groupOutline = document.createElement('div');
+        groupOutline.className = 'box-group-outline';
+        grid.appendChild(groupOutline);
+
+        for (let i = 0; i < total; i++) {
+            const item = document.createElement('div');
+            item.className = 'discrete-item filled';
+
+            if (i < initial) {
+                // 第一部分點心 (全部顯示圖示！)
+                item.innerText = icon1;
+                item.style.backgroundColor = bg1;
+            } else if (i < initial + add) {
+                // 第二部分點心 (全部顯示圖示！)
+                item.innerText = icon2;
+                item.style.backgroundColor = bg2;
+            } else {
+                // 剩餘
+                item.className = 'discrete-item';
+                item.innerText = '';
+                item.style.backgroundColor = '#634335';
+            }
+            groupOutline.appendChild(item);
+        }
+        wrapper.appendChild(grid);
+
+        // 底部總和說明小卡
+        const infoCard = document.createElement('div');
+        infoCard.style.padding = '8px 18px';
+        infoCard.style.background = 'rgba(0,0,0,0.3)';
+        infoCard.style.borderRadius = '14px';
+        infoCard.style.border = '1px solid var(--accent-gold)';
+        infoCard.style.textAlign = 'center';
+        infoCard.style.fontWeight = '700';
+        infoCard.style.fontSize = '1.05rem';
+        infoCard.innerHTML = `✨ 兩種合起來，總共是 <span class="fraction inline-frac"><span class="num-row"><span>${initial + add}</span></span><span class="den-row"><span>${total}</span></span></span> 盒！`;
+        wrapper.appendChild(infoCard);
+
+        container.appendChild(wrapper);
+    }
+
+    // 第二關專屬：雙色圓餅扇區加法 (pie-add)
+    renderPieAddInteractive(container, q, prefix = 'single') {
+        container.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.style.width = '100%';
+        wrapper.style.height = '100%';
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.justifyContent = 'center';
+        wrapper.style.gap = '15px';
+
+        const total = q.visual.totalSlices || (q.answer && q.answer.den1) || 8;
+        const initial = q.visual.initialSlices || (q.answer && q.answer.num1) || 0;
+        const add = q.visual.addSlices || (q.answer && q.answer.num2) || 0;
+        const itemInfo = this.getQuestionItemInfo(q);
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute('class', 'magic-circle-svg');
+        svg.setAttribute('viewBox', '0 0 200 200');
+        
+        const cx = 100, cy = 100, r = 85;
+        const angleStep = 360 / total;
+
+        for (let i = 0; i < total; i++) {
+            const startAngle = i * angleStep - 90;
+            const endAngle = (i + 1) * angleStep - 90;
+            const rad1 = (startAngle * Math.PI) / 180;
+            const rad2 = (endAngle * Math.PI) / 180;
+            const x1 = cx + r * Math.cos(rad1);
+            const y1 = cy + r * Math.sin(rad1);
+            const x2 = cx + r * Math.cos(rad2);
+            const y2 = cy + r * Math.sin(rad2);
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const largeArcFlag = angleStep > 180 ? 1 : 0;
+            const dStr = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+            path.setAttribute('d', dStr);
+            path.setAttribute('stroke', '#333');
+            path.setAttribute('stroke-width', '2px');
+
+            if (i < initial) {
+                // 第一部分 (金色)
+                path.setAttribute('fill', '#f1bf64');
+            } else if (i < initial + add) {
+                // 第二部分 (草莓粉紅，全部顯示圖示！)
+                path.setAttribute('fill', '#ff6b6b');
+            } else {
+                path.setAttribute('fill', 'rgba(255, 255, 255, 0.05)');
+            }
+            svg.appendChild(path);
+        }
+        wrapper.appendChild(svg);
+
+        // 底部總和說明小卡
+        const infoCard = document.createElement('div');
+        infoCard.style.padding = '8px 18px';
+        infoCard.style.background = 'rgba(0,0,0,0.3)';
+        infoCard.style.borderRadius = '14px';
+        infoCard.style.border = '1px solid var(--accent-gold)';
+        infoCard.style.textAlign = 'center';
+        infoCard.style.fontWeight = '700';
+        infoCard.style.fontSize = '1.05rem';
+        infoCard.innerHTML = `✨ ${itemInfo.emoji} 兩份合起來，總共是 <span class="fraction inline-frac"><span class="num-row"><span>${initial + add}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}${itemInfo.name}！`;
+        wrapper.appendChild(infoCard);
+
+        container.appendChild(wrapper);
+    }
+
+    // 第二關：烘焙烤盤/量筒加法動態渲染 (bread-add)
     renderAddInteractive(container, q, userAddedCount, prefix = 'single') {
         container.innerHTML = '';
         const wrapper = document.createElement('div');
@@ -1324,9 +1597,9 @@ class MagicBakeryApp {
         glass.appendChild(glow);
 
         const itemInfo = this.getQuestionItemInfo(q);
-        const total = q.visual.totalSlices || q.visual.totalItems;
-        const initial = q.visual.initialSlices || q.visual.initialItems;
-        const add = q.visual.addSlices || q.visual.addItems;
+        const total = q.visual.totalSlices || q.visual.totalItems || (q.answer && q.answer.den1) || 10;
+        const initial = q.visual.initialSlices || q.visual.initialItems || (q.answer && q.answer.num1) || 0;
+        const add = q.visual.addSlices || q.visual.addItems || (q.answer && q.answer.num2) || 0;
 
         // 我們可以使用點心/切片展示
         const loaf = document.createElement('div');
@@ -1340,16 +1613,15 @@ class MagicBakeryApp {
             slice.style.justifyContent = 'center';
             
             if (i < initial) {
-                // 原本已有的 (黃色)
+                // 原本已有的第一部分 (黃色) - 全部顯示圖示
                 slice.classList.add('filled');
                 slice.innerHTML = `<span style="font-size: 0.85rem;">${itemInfo.emoji}</span>`;
-            } else if (i < initial + userAddedCount) {
-                // 學童追加進去的 (高亮)
+            } else if (i < initial + add) {
+                // 第二部分 (高亮草莓紅) - 全部完整顯示圖示！不再只是空虛線框！
                 slice.classList.add('filled');
                 slice.style.backgroundColor = '#ff6b6b';
                 slice.innerHTML = `<span style="font-size: 0.85rem;">${itemInfo.emoji}</span>`;
-            } else if (i < initial + add) {
-                // 目標要追加的虛線框提示
+            } else {
                 slice.classList.add('target-add');
             }
             loaf.appendChild(slice);
@@ -1359,56 +1631,19 @@ class MagicBakeryApp {
         oven.appendChild(glass);
         wrapper.appendChild(oven);
 
-        // 加法操作按鈕
-        const toolArea = document.createElement('div');
-        toolArea.className = 'drag-inventory';
-        
-        let addVerb = '放入';
-        if (itemInfo.category === 'liquid') {
-            addVerb = '倒入';
-        } else if (itemInfo.category === 'linear') {
-            addVerb = '接上';
-        }
+        // 底部總和說明小卡
+        const infoCard = document.createElement('div');
+        infoCard.style.padding = '8px 18px';
+        infoCard.style.background = 'rgba(0,0,0,0.3)';
+        infoCard.style.borderRadius = '14px';
+        infoCard.style.border = '1px solid var(--accent-gold)';
+        infoCard.style.textAlign = 'center';
+        infoCard.style.fontWeight = '700';
+        infoCard.style.fontSize = '1.05rem';
+        infoCard.innerHTML = `✨ ${itemInfo.emoji} 兩份合起來，總共是 <span class="fraction inline-frac"><span class="num-row"><span>${initial + add}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}${itemInfo.name}！`;
+        wrapper.appendChild(infoCard);
 
-        toolArea.innerHTML = `
-            <button class="tool-btn" id="btn-add-val">
-                ${this.formatMathText(`${itemInfo.emoji} ${addVerb} 1/${total} ${itemInfo.unit}${itemInfo.name}`)}
-            </button>
-            <button class="tool-btn" id="btn-reset-val" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
-                🗑️ 重設
-            </button>
-        `;
-        wrapper.appendChild(toolArea);
         container.appendChild(wrapper);
-
-        // 連接按鈕邏輯
-        let currentAdded = userAddedCount;
-        
-        wrapper.querySelector('#btn-add-val').addEventListener('click', () => {
-            if (initial + currentAdded < total) {
-                currentAdded++;
-                soundEffects.playClick();
-                this.renderAddInteractive(container, q, currentAdded, prefix);
-                
-                // 同步更新分母與分子輸入格（相容單人與 AI 模式）
-                const fansDen = document.querySelector(`[data-target="${prefix}-fans-den"]`);
-                if (fansDen && fansDen.innerText === '?') {
-                    fansDen.innerText = total;
-                }
-                const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
-                if (fansNum) {
-                    fansNum.innerText = initial + currentAdded;
-                }
-            } else {
-                ttsManager.speak(`已經裝不下更多${itemInfo.name}了呢。`);
-            }
-        });
-
-        wrapper.querySelector('#btn-reset-val').addEventListener('click', () => {
-            currentAdded = 0;
-            soundEffects.playClick();
-            this.renderAddInteractive(container, q, 0, prefix);
-        });
     }
 
     // 第三關：減法互動渲染 (老鼠小偷)
@@ -2104,20 +2339,16 @@ class MagicBakeryApp {
 
         const itemInfo = this.getQuestionItemInfo(q);
 
-        if (type === 'pie' || type === 'pie-add' || type === 'pie-sub') {
+        if (type === 'pie' || type === 'pie-sub') {
             const svg = board.querySelector('svg');
             if (svg) {
                 this.drawPieSvg(svg, den, num);
             }
-        } else if (type === 'discrete' || type === 'discrete-add' || type === 'discrete-sub') {
+        } else if (type === 'discrete' || type === 'discrete-sub') {
             const grid = board.querySelector('.cookie-box-grid');
             if (grid) {
                 const emoji = itemInfo.emoji;
-
-                // 同步內部計數器
                 this.currentDiscreteCount = num;
-
-                // 重新渲染填充狀態
                 const items = grid.querySelectorAll('.discrete-item');
                 items.forEach((item, i) => {
                     if (i < num) {
