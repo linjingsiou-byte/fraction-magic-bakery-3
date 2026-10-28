@@ -1477,7 +1477,8 @@ class MagicBakeryApp {
                 if (isDiscrete) {
                     for (let i = 0; i < total; i++) {
                         const dot = document.createElement('span');
-                        dot.style.fontSize = '1.8rem';
+                        dot.style.fontSize = total > 8 ? '1.35rem' : '1.7rem';
+                        dot.style.flexShrink = '1';
                         dot.innerText = icon;
                         track.appendChild(dot);
                     }
