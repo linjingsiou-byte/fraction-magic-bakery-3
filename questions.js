@@ -552,7 +552,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "9/12 - 5/12 = ?/?",
             answer: { num1: 9, den1: 12, num2: 5, den2: 12, numAns: 4, denAns: 12 },
-            visual: { totalSlices: 12, initialSlices: 9, subSlices: 5, interactiveType: "bread-sub" },
+            visual: { totalItems: 12, initialItems: 9, subItems: 5, interactiveType: "discrete-sub" },
             feedback: {
                 denSubError: "相減時分母12不變喔！",
                 numError: "9減5等於4，分子是4喔！"

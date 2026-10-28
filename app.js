@@ -914,6 +914,118 @@ class MagicBakeryApp {
         return el && el.innerText !== '?' ? el.innerText : null;
     }
 
+    // 智慧題目物品解析：精準提取名稱、圖標、單位與操作動作
+    getQuestionItemInfo(q) {
+        const text = (q && q.text) ? q.text : '';
+        
+        let info = {
+            name: '點心',
+            emoji: '🍪',
+            unit: '塊',
+            actionVerb: '用掉',
+            actionEmoji: '✨',
+            category: 'discrete' // 'discrete', 'liquid', 'linear', 'baked'
+        };
+
+        // 1. 液體類 (公升、瓶)
+        if (text.includes('牛奶')) {
+            info = { name: '牛奶', emoji: '🥛', unit: '公升', actionVerb: '喝掉', actionEmoji: '😋', category: 'liquid' };
+        } else if (text.includes('蘋果汁')) {
+            info = { name: '蘋果汁', emoji: '🧃', unit: '公升', actionVerb: '喝掉', actionEmoji: '😋', category: 'liquid' };
+        } else if (text.includes('柳橙汁') || text.includes('芭樂汁') || text.includes('果汁')) {
+            info = { name: '果汁', emoji: '🧃', unit: '公升', actionVerb: '喝掉', actionEmoji: '😋', category: 'liquid' };
+        } else if (text.includes('椰子汁')) {
+            info = { name: '椰子汁', emoji: '🥥', unit: '公升', actionVerb: '喝掉', actionEmoji: '😋', category: 'liquid' };
+        } else if (text.includes('沙拉油')) {
+            info = { name: '沙拉油', emoji: '🍾', unit: '瓶', actionVerb: '用掉', actionEmoji: '🍳', category: 'liquid' };
+        } else if (text.includes('水瓶') || text.includes('花瓶') || (text.includes('水') && text.includes('公升'))) {
+            info = { name: '水', emoji: '💧', unit: '公升', actionVerb: '用掉', actionEmoji: '🚰', category: 'liquid' };
+        }
+        // 2. 長條類 (公尺)
+        else if (text.includes('彩帶')) {
+            info = { name: '彩帶', emoji: '🎀', unit: '公尺', actionVerb: '剪掉', actionEmoji: '✂️', category: 'linear' };
+        } else if (text.includes('緞帶')) {
+            info = { name: '緞帶', emoji: '🎀', unit: '公尺', actionVerb: '用掉', actionEmoji: '✂️', category: 'linear' };
+        } else if (text.includes('毛線')) {
+            info = { name: '毛線', emoji: '🧶', unit: '公尺', actionVerb: '用掉', actionEmoji: '✂️', category: 'linear' };
+        } else if (text.includes('長麵團') || text.includes('麵團')) {
+            info = { name: '麵團', emoji: '🥖', unit: '公尺', actionVerb: '剪掉', actionEmoji: '🔪', category: 'linear' };
+        } else if (text.includes('木頭')) {
+            info = { name: '木頭', emoji: '🪵', unit: '公尺', actionVerb: '鋸掉', actionEmoji: '🪚', category: 'linear' };
+        }
+        // 3. 盒裝離散類 / 具體物品 (盒、個、顆、枝) - 優先比對具體點心
+        else if (text.includes('布丁')) {
+            info = { name: '布丁', emoji: '🍮', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('水餃')) {
+            info = { name: '水餃', emoji: '🥟', unit: '盒', actionVerb: '煮了', actionEmoji: '🍲', category: 'discrete' };
+        } else if (text.includes('果凍')) {
+            info = { name: '果凍', emoji: '🍮', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('餅乾')) {
+            info = { name: '餅乾', emoji: '🍪', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('巧克力')) {
+            info = { name: '巧克力', emoji: '🍫', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('雞蛋')) {
+            info = { name: '雞蛋', emoji: '🥚', unit: '盒', actionVerb: '用掉', actionEmoji: '🍳', category: 'discrete' };
+        } else if (text.includes('櫻桃')) {
+            info = { name: '櫻桃', emoji: '🍒', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('蘋果')) {
+            info = { name: '蘋果', emoji: '🍎', unit: '盒', actionVerb: '賣出', actionEmoji: '🛒', category: 'discrete' };
+        } else if (text.includes('鉛筆')) {
+            info = { name: '鉛筆', emoji: '✏️', unit: '盒', actionVerb: '移走', actionEmoji: '✏️', category: 'discrete' };
+        } else if (text.includes('馬卡龍')) {
+            info = { name: '馬卡龍', emoji: '🧁', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('甜甜圈')) {
+            info = { name: '甜甜圈', emoji: '🍩', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('鳳梨酥')) {
+            info = { name: '鳳梨酥', emoji: '🍍', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('綠豆椪') || text.includes('蛋黃酥')) {
+            info = { name: '糕點', emoji: '🥮', unit: '盒', actionVerb: '吃掉', actionEmoji: '😋', category: 'discrete' };
+        } else if (text.includes('草莓') || text.includes('芒果')) {
+            info = { name: '水果', emoji: '🍓', unit: '盒', actionVerb: '用掉', actionEmoji: '😋', category: 'discrete' };
+        }
+        // 4. 圓形烘焙/分切點心 (個、塊)
+        else if (text.includes('鬆餅')) {
+            info = { name: '鬆餅', emoji: '🥞', unit: '個', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
+        } else if (text.includes('披薩')) {
+            info = { name: '披薩', emoji: '🍕', unit: '個', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
+        } else if (text.includes('大餅')) {
+            info = { name: '大餅', emoji: '🥞', unit: '塊', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
+        } else if (text.includes('蛋糕')) {
+            info = { name: '蛋糕', emoji: '🍰', unit: '個', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
+        } else if (text.includes('麵包') || text.includes('吐司')) {
+            info = { name: '麵包', emoji: '🍞', unit: '塊', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
+        }
+
+        // 依據題目實際動詞微調動作動詞與動作 Emoji
+        if (text.includes('喝掉') || text.includes('喝了') || text.includes('共喝')) {
+            info.actionVerb = '喝掉';
+            info.actionEmoji = '🥤';
+        } else if (text.includes('煮了') || text.includes('煮水餃')) {
+            info.actionVerb = '煮了';
+            info.actionEmoji = '🍲';
+        } else if (text.includes('鋸掉') || text.includes('鋸成')) {
+            info.actionVerb = '鋸掉';
+            info.actionEmoji = '🪚';
+        } else if (text.includes('剪掉') || text.includes('剪成')) {
+            info.actionVerb = '剪掉';
+            info.actionEmoji = '✂️';
+        } else if (text.includes('賣出')) {
+            info.actionVerb = '賣出';
+            info.actionEmoji = '🛒';
+        } else if (text.includes('吃掉') || text.includes('吃了') || text.includes('偷吃')) {
+            info.actionVerb = '吃掉';
+            info.actionEmoji = '😋';
+        } else if (text.includes('拿走')) {
+            info.actionVerb = '拿走';
+            info.actionEmoji = '💨';
+        } else if (text.includes('用掉') || text.includes('用了')) {
+            info.actionVerb = '用掉';
+            info.actionEmoji = '✨';
+        }
+
+        return info;
+    }
+
     // ==================== 渲染與更新視覺互動區 ====================
     renderSingleInteraction(q, containerId = 'single-interactive-content') {
         const container = document.getElementById(containerId);
@@ -922,6 +1034,7 @@ class MagicBakeryApp {
 
         const type = q.visual.interactiveType;
         const prefix = containerId.startsWith('ai') ? 'ai' : 'single';
+        const itemInfo = this.getQuestionItemInfo(q);
 
         // 1. 第一關：圓形魔法盤 (和 1 一樣大)
         if (type === 'pie') {
@@ -945,7 +1058,7 @@ class MagicBakeryApp {
             inventory.className = 'drag-inventory';
             inventory.innerHTML = `
                 <button class="tool-btn" id="btn-add-slice">
-                    ${this.formatMathText(`🍰 放入 1/${q.visual.totalSlices} 塊麵包`)}
+                    ${this.formatMathText(`${itemInfo.emoji} 放入 1/${q.visual.totalSlices} 塊${itemInfo.name}`)}
                 </button>
                 <button class="tool-btn" id="btn-clear-slices" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
                     🗑️ 清空
@@ -982,7 +1095,7 @@ class MagicBakeryApp {
                     }
                     updatePie();
                 } else {
-                    ttsManager.speak("盤子已經裝滿蛋糕了呢。");
+                    ttsManager.speak(`盤子已經裝滿${itemInfo.name}了呢。`);
                 }
             });
 
@@ -1004,27 +1117,8 @@ class MagicBakeryApp {
             wrapper.style.alignItems = 'center';
             wrapper.style.justifyContent = 'center';
 
-            // 根據題目文字自動判斷對應的 Emoji 與單位名稱
-            let emoji = '🍩';
-            let name = '點心';
-            let unitName = '個';
-            if (q.text.includes('雞蛋')) {
-                emoji = '🥚';
-                name = '雞蛋';
-                unitName = '個';
-            } else if (q.text.includes('果凍')) {
-                emoji = '🍮';
-                name = '果凍';
-                unitName = '個';
-            } else if (q.text.includes('巧克力')) {
-                emoji = '🍫';
-                name = '巧克力';
-                unitName = '顆';
-            } else if (q.text.includes('餅乾')) {
-                emoji = '🍪';
-                name = '餅乾';
-                unitName = '片';
-            }
+            const emoji = itemInfo.emoji;
+            const name = itemInfo.name;
 
             const grid = document.createElement('div');
             grid.className = 'cookie-box-grid';
@@ -1229,26 +1323,31 @@ class MagicBakeryApp {
         glow.className = 'oven-glow';
         glass.appendChild(glow);
 
-        // 放置吐司或披薩
+        const itemInfo = this.getQuestionItemInfo(q);
         const total = q.visual.totalSlices || q.visual.totalItems;
         const initial = q.visual.initialSlices || q.visual.initialItems;
         const add = q.visual.addSlices || q.visual.addItems;
 
-        // 我們可以使用麵包切片展示
+        // 我們可以使用點心/切片展示
         const loaf = document.createElement('div');
         loaf.className = 'bread-loaf';
 
         for (let i = 0; i < total; i++) {
             const slice = document.createElement('div');
             slice.className = 'bread-slice';
+            slice.style.display = 'inline-flex';
+            slice.style.alignItems = 'center';
+            slice.style.justifyContent = 'center';
             
             if (i < initial) {
                 // 原本已有的 (黃色)
                 slice.classList.add('filled');
+                slice.innerHTML = `<span style="font-size: 0.85rem;">${itemInfo.emoji}</span>`;
             } else if (i < initial + userAddedCount) {
-                // 學童追加進去的 (黃色)
+                // 學童追加進去的 (高亮)
                 slice.classList.add('filled');
-                slice.style.backgroundColor = '#ff6b6b'; // 用草莓紅色高亮
+                slice.style.backgroundColor = '#ff6b6b';
+                slice.innerHTML = `<span style="font-size: 0.85rem;">${itemInfo.emoji}</span>`;
             } else if (i < initial + add) {
                 // 目標要追加的虛線框提示
                 slice.classList.add('target-add');
@@ -1264,10 +1363,16 @@ class MagicBakeryApp {
         const toolArea = document.createElement('div');
         toolArea.className = 'drag-inventory';
         
-        const unitName = q.visual.interactiveType.includes('discrete') ? '個' : '塊';
+        let addVerb = '放入';
+        if (itemInfo.category === 'liquid') {
+            addVerb = '倒入';
+        } else if (itemInfo.category === 'linear') {
+            addVerb = '接上';
+        }
+
         toolArea.innerHTML = `
             <button class="tool-btn" id="btn-add-val">
-                ${this.formatMathText(`➕ 放入 1/${total} ${unitName}吐司`)}
+                ${this.formatMathText(`${itemInfo.emoji} ${addVerb} 1/${total} ${itemInfo.unit}${itemInfo.name}`)}
             </button>
             <button class="tool-btn" id="btn-reset-val" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
                 🗑️ 重設
@@ -1295,7 +1400,7 @@ class MagicBakeryApp {
                     fansNum.innerText = initial + currentAdded;
                 }
             } else {
-                ttsManager.speak("烤爐已經裝不下麵包了呢。");
+                ttsManager.speak(`已經裝不下更多${itemInfo.name}了呢。`);
             }
         });
 
@@ -1312,6 +1417,7 @@ class MagicBakeryApp {
         const wrapper = document.createElement('div');
         wrapper.className = 'box-container';
 
+        const itemInfo = this.getQuestionItemInfo(q);
         const total = q.visual.totalSlices || q.visual.totalItems;
         const initial = q.visual.initialSlices || q.visual.initialItems;
         const sub = q.visual.subSlices || q.visual.subItems;
@@ -1326,10 +1432,8 @@ class MagicBakeryApp {
         const grid = document.createElement('div');
         grid.className = 'cookie-box-grid';
 
-        const isPencilProblem = q.visual.interactiveType === 'discrete-sub' && total === 12; // 鉛筆 12 枝
-        
-        // 若是鉛筆，我們可以使用鉛筆圖案，若是其他可以用餅乾 🍪
-        const icon = isPencilProblem ? '✏️' : '🍪';
+        const isPencilProblem = itemInfo.name === '鉛筆';
+        const icon = itemInfo.emoji;
         
         // 如果是離散量包覆框，則放一個邊框框
         const groupOutline = document.createElement('div');
@@ -1403,7 +1507,7 @@ class MagicBakeryApp {
         // 加上老鼠偷吃提示按鈕
         const tipBtn = document.createElement('button');
         tipBtn.className = 'tool-btn';
-        tipBtn.innerHTML = `🐭 召喚小偷老鼠咬掉 ${sub} ${isPencilProblem ? '枝' : '塊'}`;
+        tipBtn.innerHTML = `🐭 召喚小偷老鼠${itemInfo.actionVerb} ${sub} ${isPencilProblem ? '枝' : '個'}`;
         tipBtn.addEventListener('click', () => {
             soundEffects.playClick();
             // 播放老鼠跑過去動畫
@@ -1431,7 +1535,7 @@ class MagicBakeryApp {
                 const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
                 if (fansNum) fansNum.innerText = initial - sub;
                 
-                ttsManager.speak(`老鼠小偷把 ${sub} ${isPencilProblem ? '枝' : '塊'} 偷走囉！`);
+                ttsManager.speak(`老鼠小偷把 ${sub} ${isPencilProblem ? '枝' : '個'}${itemInfo.name}${itemInfo.actionVerb}囉！`);
                 soundEffects.playWrong();
                 
                 // 老鼠跑回角落
@@ -1452,13 +1556,16 @@ class MagicBakeryApp {
         const wrapper = document.createElement('div');
         wrapper.className = 'ribbon-container';
 
+        const itemInfo = this.getQuestionItemInfo(q);
         const total = q.visual.totalSlices || q.visual.totalItems;
         const sub = q.visual.subSlices || q.visual.subItems || 0;
 
         const isDiscrete = q.visual.interactiveType.includes('discrete');
-        const icon = isDiscrete ? '🍒' : '🎀';
+        const isLiquid = itemInfo.category === 'liquid' || q.visual.interactiveType.includes('bread');
+        const isWood = itemInfo.name === '木頭';
+        const icon = itemInfo.emoji;
 
-        // 畫面上彩帶
+        // 畫面上彩帶/容器軌道
         const track = document.createElement('div');
         track.className = 'ribbon-track';
         track.style.height = isDiscrete ? '60px' : '45px';
@@ -1467,13 +1574,13 @@ class MagicBakeryApp {
 
         // 彩帶狀態
         this.ribbonIsCut = false;
-        this.cutSegmentsCount = 0; // 被剪掉的段數
+        this.cutSegmentsCount = 0; // 被扣除的段數
 
         const renderSegments = () => {
             track.innerHTML = '';
             
             if (!this.ribbonIsCut) {
-                // 一整條 1 公尺 (或 1 盒)
+                // 一整條 1 公尺 (或 1 盒 / 1 公升)
                 if (isDiscrete) {
                     for (let i = 0; i < total; i++) {
                         const dot = document.createElement('span');
@@ -1487,12 +1594,19 @@ class MagicBakeryApp {
                     const block = document.createElement('div');
                     block.style.width = '100%';
                     block.style.height = '100%';
-                    block.style.backgroundColor = 'var(--accent-strawberry)';
+                    block.style.backgroundColor = isLiquid ? '#339af0' : (isWood ? '#8d6e63' : 'var(--accent-strawberry)');
+                    block.style.color = '#ffffff';
                     block.style.display = 'flex';
                     block.style.alignItems = 'center';
                     block.style.justifyContent = 'center';
                     block.style.fontWeight = '800';
-                    block.innerText = "1 公尺的彩帶";
+                    if (isLiquid) {
+                        block.innerText = `1 ${itemInfo.unit}滿滿的${itemInfo.name}`;
+                    } else if (isWood) {
+                        block.innerText = `1 公尺長的${itemInfo.name}`;
+                    } else {
+                        block.innerText = `1 公尺長的${itemInfo.name}`;
+                    }
                     track.appendChild(block);
                 }
             } else {
@@ -1508,7 +1622,7 @@ class MagicBakeryApp {
                             dot.innerText = '💨';
                         }
                         
-                        // 點選剪去
+                        // 點選扣除
                         dot.addEventListener('click', () => {
                             soundEffects.playClick();
                             if (dot.classList.contains('removed')) {
@@ -1526,9 +1640,14 @@ class MagicBakeryApp {
                     } else {
                         const seg = document.createElement('div');
                         seg.className = 'ribbon-segment';
+                        if (isLiquid) {
+                            seg.style.backgroundColor = '#74c0fc';
+                        } else if (isWood) {
+                            seg.style.backgroundColor = '#bcaaa4';
+                        }
                         
                         if (i < this.cutSegmentsCount) {
-                            seg.classList.add('cut'); // 被剪掉
+                            seg.classList.add('cut'); // 被剪掉/用掉
                         }
 
                         // 點選剪去
@@ -1569,16 +1688,30 @@ class MagicBakeryApp {
         renderSegments();
         wrapper.appendChild(track);
 
+        // 工具欄按鈕設定
+        let cutBtnText = `🪓 平分切成 ${total} 等分`;
+        if (isDiscrete) {
+            cutBtnText = `📦 打開盒子，平分 ${total} 份`;
+        } else if (isLiquid) {
+            cutBtnText = `🧪 劃分 ${total} 等分刻度`;
+        } else if (isWood) {
+            cutBtnText = `🪚 鋸成 ${total} 等分`;
+        } else if (itemInfo.name === '麵團') {
+            cutBtnText = `🔪 切成 ${total} 等分`;
+        }
+
+        const removeBtnText = `${itemInfo.actionEmoji} ${itemInfo.actionVerb} ${sub} 份`;
+
         // 工具欄
         const tools = document.createElement('div');
         tools.className = 'ribbon-tools';
         
         tools.innerHTML = `
             <button class="tool-btn" id="btn-cut-action">
-                🪓 平分切成 ${total} 等分
+                ${cutBtnText}
             </button>
             <button class="tool-btn" id="btn-remove-sub" style="display:none;">
-                ✂️ 剪掉 ${sub} 份
+                ${removeBtnText}
             </button>
         `;
         wrapper.appendChild(tools);
@@ -1605,7 +1738,7 @@ class MagicBakeryApp {
                 }
             }
 
-            ttsManager.speak(`把1${isDiscrete ? '盒' : '公尺'}平分切成 ${total} 份，就是 ${total}/${total} 喔！`);
+            ttsManager.speak(`把 1 ${itemInfo.unit}${itemInfo.name}平分成 ${total} 份，就是 ${total}/${total} 喔！`);
 
             cutBtn.style.display = 'none';
             removeBtn.style.display = 'inline-flex';
@@ -1616,7 +1749,7 @@ class MagicBakeryApp {
             this.cutSegmentsCount = sub;
             renderSegments();
             syncEquation();
-            ttsManager.speak(`用剪刀剪掉了 ${sub} 份呢。`);
+            ttsManager.speak(`${itemInfo.actionVerb}了 ${sub} 份呢。`);
         });
     }
 
@@ -1969,19 +2102,17 @@ class MagicBakeryApp {
         const board = document.getElementById(containerId);
         if (!board) return;
 
+        const itemInfo = this.getQuestionItemInfo(q);
+
         if (type === 'pie' || type === 'pie-add' || type === 'pie-sub') {
             const svg = board.querySelector('svg');
             if (svg) {
                 this.drawPieSvg(svg, den, num);
             }
-        } else if (type === 'discrete') {
+        } else if (type === 'discrete' || type === 'discrete-add' || type === 'discrete-sub') {
             const grid = board.querySelector('.cookie-box-grid');
             if (grid) {
-                let emoji = '🍩';
-                if (q.text.includes('雞蛋')) emoji = '🥚';
-                else if (q.text.includes('果凍')) emoji = '🍮';
-                else if (q.text.includes('巧克力')) emoji = '🍫';
-                else if (q.text.includes('餅乾')) emoji = '🍪';
+                const emoji = itemInfo.emoji;
 
                 // 同步內部計數器
                 this.currentDiscreteCount = num;
