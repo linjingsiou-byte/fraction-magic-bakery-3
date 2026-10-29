@@ -268,7 +268,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "2/6 + 3/6 = ?/?",
             answer: { num1: 2, den1: 6, num2: 3, den2: 6, numAns: 5, denAns: 6 },
-            visual: { totalSlices: 6, initialSlices: 2, addSlices: 3, interactiveType: "pie-add" },
+            visual: { totalItems: 6, initialItems: 2, addItems: 3, interactiveType: "discrete-add" },
             feedback: {
                 denAddError: "別忘了，分母代表一盒平分成6份，相加時分母6不變喔！",
                 numError: "分子是 2 加上 3，等於 5 喔！"
@@ -316,7 +316,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "1/4 + 2/4 = ?/?",
             answer: { num1: 1, den1: 4, num2: 2, den2: 4, numAns: 3, denAns: 4 },
-            visual: { totalSlices: 4, initialSlices: 1, addSlices: 2, interactiveType: "pie-add" },
+            visual: { totalItems: 4, initialItems: 1, addItems: 2, interactiveType: "discrete-add" },
             feedback: {
                 denAddError: "分母4代表一盒分成4份，加法時分母不變喔！",
                 numError: "1份加上2份是3份，分子是3喔！"
@@ -328,7 +328,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "3/12 + 8/12 = ?/?",
             answer: { num1: 3, den1: 12, num2: 8, den2: 12, numAns: 11, denAns: 12 },
-            visual: { totalSlices: 12, initialSlices: 3, addSlices: 8, interactiveType: "bread-add" },
+            visual: { totalItems: 12, initialItems: 3, addItems: 8, interactiveType: "discrete-add" },
             feedback: {
                 denAddError: "相加時分母12不變喔！",
                 numError: "3份加上8份是11份，分子是11喔！"
@@ -364,7 +364,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "3/8 + 4/8 = ?/?",
             answer: { num1: 3, den1: 8, num2: 4, den2: 8, numAns: 7, denAns: 8 },
-            visual: { totalSlices: 8, initialSlices: 3, addSlices: 4, interactiveType: "pie-add" },
+            visual: { totalSlices: 8, initialSlices: 3, addSlices: 4, interactiveType: "bread-add" },
             feedback: {
                 denAddError: "分母8代表沙拉油瓶子等份，加法時分母是不變的呢。",
                 numError: "3加4等於7，分子是7喔！"
@@ -490,7 +490,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "5/6 - 2/6 = ?/?",
             answer: { num1: 5, den1: 6, num2: 2, den2: 6, numAns: 3, denAns: 6 },
-            visual: { totalSlices: 6, initialSlices: 5, subSlices: 2, interactiveType: "pie-sub" },
+            visual: { totalItems: 6, initialItems: 5, subItems: 2, interactiveType: "discrete-sub" },
             feedback: {
                 denSubError: "減法計算時分母6不變喔！",
                 numError: "5減2等於3，分子是3喔！"
@@ -502,7 +502,7 @@ const gameQuestions = {
             type: "equation",
             initialEq: "4/5 - 1/5 = ?/?",
             answer: { num1: 4, den1: 5, num2: 1, den2: 5, numAns: 3, denAns: 5 },
-            visual: { totalSlices: 5, initialSlices: 4, subSlices: 1, interactiveType: "pie-sub" },
+            visual: { totalItems: 5, initialItems: 4, subItems: 1, interactiveType: "discrete-sub" },
             feedback: {
                 denSubError: "減法計算時分母5不變喔！",
                 numError: "4個減掉1個是3個，分子是3喔！"

@@ -1201,11 +1201,27 @@ class MagicBakeryApp {
             wrapper.className = 'ribbon-container';
             wrapper.style.width = '90%';
             
-            // 紅彩帶 (12/12)
+            // 動態解析題目中的兩條彩帶名稱與顏色
+            const matchRibbons = q.text.match(/(\S+彩帶)長\s*([\d\/]+)\s*公尺[，,]\s*(\S+彩帶)長\s*([\d\/]+)\s*公尺/);
+            const name1 = matchRibbons ? matchRibbons[1] : '第一條彩帶';
+            const name2 = matchRibbons ? matchRibbons[3] : '第二條彩帶';
+
+            const getColorForName = (name) => {
+                if (name.includes('紅')) return 'var(--accent-strawberry)';
+                if (name.includes('綠')) return '#51cf66';
+                if (name.includes('藍')) return '#339af0';
+                if (name.includes('黃')) return '#fcc419';
+                return 'var(--accent-strawberry)';
+            };
+
+            const color1 = getColorForName(name1);
+            const color2 = getColorForName(name2);
+
+            // 第一條彩帶
             const label1 = document.createElement('div');
             label1.style.fontWeight = '700';
             label1.style.alignSelf = 'flex-start';
-            label1.innerHTML = `紅色彩帶 (長 <span class="fraction"><span class="num-row"><span>${q.visual.r1.num}</span></span><span class="den-row"><span>${q.visual.r1.den}</span></span></span> 公尺)：`;
+            label1.innerHTML = `${name1} (長 <span class="fraction"><span class="num-row"><span>${q.visual.r1.num}</span></span><span class="den-row"><span>${q.visual.r1.den}</span></span></span> 公尺)：`;
             wrapper.appendChild(label1);
 
             const track1 = document.createElement('div');
@@ -1213,17 +1229,17 @@ class MagicBakeryApp {
             for (let i = 0; i < q.visual.r1.den; i++) {
                 const seg = document.createElement('div');
                 seg.className = 'ribbon-segment';
-                seg.style.backgroundColor = 'var(--accent-strawberry)';
+                seg.style.backgroundColor = color1;
                 track1.appendChild(seg);
             }
             wrapper.appendChild(track1);
 
-            // 綠彩帶 (3/3)
+            // 第二條彩帶
             const label2 = document.createElement('div');
             label2.style.fontWeight = '700';
             label2.style.alignSelf = 'flex-start';
             label2.style.marginTop = '20px';
-            label2.innerHTML = `綠色彩帶 (長 <span class="fraction"><span class="num-row"><span>${q.visual.r2.num}</span></span><span class="den-row"><span>${q.visual.r2.den}</span></span></span> 公尺)：`;
+            label2.innerHTML = `${name2} (長 <span class="fraction"><span class="num-row"><span>${q.visual.r2.num}</span></span><span class="den-row"><span>${q.visual.r2.den}</span></span></span> 公尺)：`;
             wrapper.appendChild(label2);
 
             const track2 = document.createElement('div');
@@ -1231,7 +1247,7 @@ class MagicBakeryApp {
             for (let i = 0; i < q.visual.r2.den; i++) {
                 const seg = document.createElement('div');
                 seg.className = 'ribbon-segment';
-                seg.style.backgroundColor = 'var(--accent-matcha)';
+                seg.style.backgroundColor = color2;
                 track2.appendChild(seg);
             }
             wrapper.appendChild(track2);
@@ -1325,18 +1341,41 @@ class MagicBakeryApp {
         wrapper.style.justifyContent = 'center';
         wrapper.style.gap = '18px';
 
+        const itemInfo = this.getQuestionItemInfo(q);
         const total = q.visual.totalSlices || (q.answer && q.answer.den1) || 10;
         const initial = q.visual.initialSlices || (q.answer && q.answer.num1) || 0;
         const add = q.visual.addSlices || (q.answer && q.answer.num2) || 0;
 
-        // 雙色彩帶圖例標籤 (紅彩帶 + 藍彩帶/綠彩帶)
-        let color1Name = '紅彩帶';
-        let color2Name = '藍彩帶';
-        let color2Bg = '#339af0'; // 天空藍
-        if (q.text.includes('綠彩帶')) {
+        // 雙色彩帶圖例標籤 (動態精準解析彩帶/緞帶顏色)
+        const getColorStyle = (name, defaultColor) => {
+            if (name.includes('紅')) return 'var(--accent-strawberry)';
+            if (name.includes('綠')) return '#51cf66';
+            if (name.includes('藍')) return '#339af0';
+            if (name.includes('黃')) return '#fcc419';
+            return defaultColor;
+        };
+
+        let color1Name = '第一段彩帶';
+        let color2Name = '第二段彩帶';
+        const matchRibbonAdd = q.text.match(/(\S+彩帶|\S+緞帶)[^，,]*[，,]\s*(\S+彩帶|\S+緞帶)/);
+        if (matchRibbonAdd) {
+            color1Name = matchRibbonAdd[1].replace(/用了|買了|有/g, '');
+            color2Name = matchRibbonAdd[2].replace(/用了|買了|有/g, '');
+        } else if (q.text.includes('紅彩帶') && q.text.includes('綠彩帶')) {
+            color1Name = '紅彩帶';
             color2Name = '綠彩帶';
-            color2Bg = '#51cf66'; // 抹茶綠
+        } else if (q.text.includes('紅彩帶') && q.text.includes('藍彩帶')) {
+            color1Name = '紅彩帶';
+            color2Name = '藍彩帶';
+        } else if (itemInfo.name === '緞帶') {
+            color1Name = '包裝緞帶';
+            color2Name = '剩下緞帶';
+        } else {
+            color1Name = '使用彩帶';
+            color2Name = '剩下彩帶';
         }
+        let color1Bg = getColorStyle(color1Name, 'var(--accent-strawberry)');
+        let color2Bg = getColorStyle(color2Name, '#339af0');
 
         const legend = document.createElement('div');
         legend.style.display = 'flex';
@@ -1347,7 +1386,7 @@ class MagicBakeryApp {
 
         legend.innerHTML = `
             <div style="display:flex; align-items:center; gap:6px;">
-                <span style="display:inline-block; width:14px; height:14px; background:var(--accent-strawberry); border-radius:3px;"></span>
+                <span style="display:inline-block; width:14px; height:14px; background:${color1Bg}; border-radius:3px;"></span>
                 <span>${color1Name} (長 <span class="fraction inline-frac"><span class="num-row"><span>${initial}</span></span><span class="den-row"><span>${total}</span></span></span> 公尺)</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -1374,7 +1413,7 @@ class MagicBakeryApp {
 
             if (i < initial) {
                 // 第一部分：紅彩帶 (全部顯示圖示！)
-                seg.style.backgroundColor = 'var(--accent-strawberry)';
+                seg.style.backgroundColor = color1Bg;
                 seg.innerHTML = `<span>🎀</span>`;
                 seg.title = `第 ${i + 1} 份紅彩帶`;
             } else if (i < initial + add) {
@@ -1739,10 +1778,11 @@ class MagicBakeryApp {
 
         wrapper.appendChild(grid);
 
-        // 加上老鼠偷吃提示按鈕
+        // 加上老鼠偷吃提示按鈕 (單位精準對齊題目：枝、塊、顆、個)
+        const subUnit = isPencilProblem ? '枝' : (itemInfo.name === '大餅' ? '塊' : ((itemInfo.name === '巧克力' || itemInfo.name === '櫻桃') ? '顆' : '個'));
         const tipBtn = document.createElement('button');
         tipBtn.className = 'tool-btn';
-        tipBtn.innerHTML = `🐭 召喚小偷老鼠${itemInfo.actionVerb} ${sub} ${isPencilProblem ? '枝' : '個'}`;
+        tipBtn.innerHTML = `🐭 召喚小偷老鼠${itemInfo.actionVerb} ${sub} ${subUnit}`;
         tipBtn.addEventListener('click', () => {
             soundEffects.playClick();
             // 播放老鼠跑過去動畫
@@ -1770,7 +1810,7 @@ class MagicBakeryApp {
                 const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
                 if (fansNum) fansNum.innerText = initial - sub;
                 
-                ttsManager.speak(`老鼠小偷把 ${sub} ${isPencilProblem ? '枝' : '個'}${itemInfo.name}${itemInfo.actionVerb}囉！`);
+                ttsManager.speak(`老鼠小偷把 ${sub} ${subUnit}${itemInfo.name}${itemInfo.actionVerb}囉！`);
                 soundEffects.playWrong();
                 
                 // 老鼠跑回角落
