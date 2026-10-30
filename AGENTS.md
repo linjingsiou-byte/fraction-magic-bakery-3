@@ -15,6 +15,7 @@
 - 2026-10-28：完成全裝置跨螢幕響應式（RWD）深度優化與自動化檢測（涵蓋桌機、平板橫/直向、手機全關卡零溢出，並加入 test_responsive.js）
 - 2026-10-28：完成全專案 60 題題目文字與視覺配料盤（Emoji 圖示、單位、操作動詞、未平分容器標籤與語音）100% 深度對齊，並加入 test_consistency_render.js 自動化檢測
 - 2026-10-29：完成全 60 題逐題模型深度校準（盒裝點心與沙拉油模型修正、彩帶動態雙軌色彩對齊、老鼠偷吃精準單位與 AI 挑戰賽執行期報錯消除）
+- 2026-10-30：完成全維度 QA 評測管線（fraction-game-qa-pipeline）體檢認證，達成 0 Critical / 0 Warning，實裝 qa-audit.js、狀態機計時器守衛、TTS 雜音清洗與離線字型 fallback，升級為版本 3.1
 
 ## 目標與路線圖
 - [x] 階段一：核心烘焙遊戲架構開發（單人關卡、雙人競賽、題庫、Web Audio 音效與 TTS 報讀）
@@ -37,6 +38,8 @@
 ├── tts.js                      # 語音報讀模組（Web Speech API）
 ├── verify_questions.js         # 題庫驗證測試腳本
 ├── test_consistency_render.js # 題目與圖示全要素一致性自動化測試腳本
+├── qa-audit.js                 # 全維度自動化 QA 體檢腳本（7大維度）
+├── qa-diagnostic-report.md     # 全維度評測診斷報告（五星卓越級認證）
 ├── run_playtest_3.js           # 自動化遊玩測試腳本
 ├── test_ai_challenge.js        # 單人 AI 挑戰賽自動化測試腳本
 ├── test_responsive.js          # 全裝置跨螢幕響應式自動化測試腳本

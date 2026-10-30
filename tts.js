@@ -81,6 +81,16 @@ class TtsManager {
         return result;
     }
 
+    // 清理文字中的 HTML 標籤、Emoji 與多餘空白，防範語音朗讀雜音
+    cleanSpeechText(rawText) {
+        if (!rawText) return '';
+        return rawText
+            .replace(/<[^>]+>/g, '') // 清理 HTML 標籤
+            .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '') // 清理 Emoji
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     // 報讀文字
     speak(text) {
         if (!this.synth || !this.enabled) return;
@@ -88,7 +98,10 @@ class TtsManager {
         // 停止之前的語音，避免重疊
         this.stop();
 
-        const translatedText = this.translateText(text);
+        const cleaned = this.cleanSpeechText(text);
+        if (!cleaned) return;
+
+        const translatedText = this.translateText(cleaned);
         const utterance = new SpeechSynthesisUtterance(translatedText);
         
         if (this.voice) {

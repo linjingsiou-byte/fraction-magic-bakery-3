@@ -42,9 +42,11 @@ class MagicBakeryApp {
         this.singleScore = 0;
 
         // 雙人對戰狀態
+        this.isBattleActive = false;
         this.battleQuestions = [];
         this.battleCurrentQuestionIdx = 0;
         this.battleTimerInterval = null;
+        this.battleNextQuestionTimeout = null;
         this.battleTimeLimit = 30; // 每題 30 秒
         this.battleTimerVal = 30;
         this.p1Score = 0;
@@ -333,8 +335,18 @@ class MagicBakeryApp {
         document.getElementById('btn-close-guide').addEventListener('click', closeGuide);
         document.getElementById('btn-close-guide-bottom').addEventListener('click', closeGuide);
 
-        // 實體鍵盤監聽支援 (支援單人與 AI 挑戰賽)
+        // 實體鍵盤監聽支援 (支援單人、AI 挑戰賽與彈窗無障礙快捷鍵)
         window.addEventListener('keydown', (e) => {
+            // 彈窗無障礙鍵盤支援：按 Escape 或 Enter 關閉秘笈
+            const modal = document.getElementById('modal-secret-guide');
+            if (modal && modal.classList.contains('active')) {
+                if (e.key === 'Escape' || e.key === 'Enter') {
+                    e.preventDefault();
+                    this.toggleSecretGuide(false);
+                    return;
+                }
+            }
+
             if (this.activeScreen === 'screen-single-play') {
                 if (e.key >= '0' && e.key <= '9') {
                     this.handleVirtualKeyboardInput(e.key);
@@ -384,6 +396,9 @@ class MagicBakeryApp {
     }
 
     showScreen(screenId) {
+        if (screenId === 'screen-lobby' || screenId === 'screen-result') {
+            ttsManager.stop();
+        }
         this.screenLobby.classList.remove('active');
         this.screenSinglePlay.classList.remove('active');
         this.screenDoublePlay.classList.remove('active');
@@ -2438,6 +2453,11 @@ class MagicBakeryApp {
         this.battleCurrentQuestionIdx = 0;
         this.p1Score = 0;
         this.p2Score = 0;
+        this.isBattleActive = true;
+        if (this.battleNextQuestionTimeout) {
+            clearTimeout(this.battleNextQuestionTimeout);
+            this.battleNextQuestionTimeout = null;
+        }
 
         document.getElementById('p1-score').innerText = "0 分";
         document.getElementById('p2-score').innerText = "0 分";
@@ -2835,7 +2855,10 @@ class MagicBakeryApp {
         // 檢查雙方是否都已作答完畢
         if (this.p1Answered && this.p2Answered) {
             clearInterval(this.battleTimerInterval);
-            setTimeout(() => this.nextBattleQuestion(), 1500);
+            if (this.battleNextQuestionTimeout) clearTimeout(this.battleNextQuestionTimeout);
+            this.battleNextQuestionTimeout = setTimeout(() => {
+                if (this.isBattleActive) this.nextBattleQuestion();
+            }, 1500);
         }
     }
 
@@ -2850,10 +2873,19 @@ class MagicBakeryApp {
             document.getElementById('p2-feedback').className = "battle-feedback wrong";
         }
 
-        setTimeout(() => this.nextBattleQuestion(), 1800);
+        if (this.battleNextQuestionTimeout) clearTimeout(this.battleNextQuestionTimeout);
+        this.battleNextQuestionTimeout = setTimeout(() => {
+            if (this.isBattleActive) this.nextBattleQuestion();
+        }, 1800);
     }
 
     nextBattleQuestion() {
+        if (!this.isBattleActive) return;
+        if (this.battleNextQuestionTimeout) {
+            clearTimeout(this.battleNextQuestionTimeout);
+            this.battleNextQuestionTimeout = null;
+        }
+        this.clearBattleThinkingTimer();
         this.clearBattleThinkingTimer();
         this.battleCurrentQuestionIdx++;
         if (this.battleCurrentQuestionIdx < this.battleQuestions.length) {
@@ -2864,8 +2896,14 @@ class MagicBakeryApp {
     }
 
     endBattle() {
+        this.isBattleActive = false;
         this.clearBattleThinkingTimer();
         clearInterval(this.battleTimerInterval);
+        if (this.battleNextQuestionTimeout) {
+            clearTimeout(this.battleNextQuestionTimeout);
+            this.battleNextQuestionTimeout = null;
+        }
+        ttsManager.stop();
         const p1Side = document.getElementById('p1-side');
         const p2Side = document.getElementById('p2-side');
         if (p1Side) p1Side.classList.remove('cooling', 'shake-warn');

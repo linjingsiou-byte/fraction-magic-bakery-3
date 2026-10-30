@@ -317,6 +317,27 @@ class SoundManager {
             console.warn("Failed to play charge audio", e);
         }
     }
+
+    // 通用音頻播放器 (防崩潰與自訂音效兜底)
+    playTone(freq = 440, duration = 0.12, type = 'sine') {
+        this.init();
+        if (!this.ctx) return;
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + duration);
+        } catch (e) {
+            console.warn("Failed to playTone", e);
+        }
+    }
 }
 
 // 實例化全域音效管理器

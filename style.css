@@ -22,8 +22,8 @@
     --border-color: #513a33;
     --border-color-glow: rgba(229, 169, 60, 0.2);
     
-    --font-heading: 'Playpen Sans', 'Noto Sans TC', sans-serif;
-    --font-body: 'Outfit', 'Noto Sans TC', sans-serif;
+    --font-heading: 'Playpen Sans', 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+    --font-body: 'Outfit', 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
     
     --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     --glass-bg: rgba(42, 27, 23, 0.75);
