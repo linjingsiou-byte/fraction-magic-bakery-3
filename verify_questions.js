@@ -50,7 +50,7 @@ for (let lvl = 1; lvl <= 4; lvl++) {
         // ------------------ LEVEL 1 ------------------
         if (lvl === 1) {
             if (q.type === 'choice') {
-                if (q.visual.interactiveType === 'pie') {
+                if (q.visual.interactiveType === 'pie' || q.visual.interactiveType === 'bread-bar') {
                     // e.g. "6/6個蛋糕... 1個蛋糕..." -> totalSlices: 6, targetSlices: 6
                     assert(textFracs.length >= 1, `[${qId}] Missing fraction in text: "${q.text}"`);
                     if (textFracs.length >= 1) {

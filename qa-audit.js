@@ -170,11 +170,18 @@ for (let lvl = 1; lvl <= 4; lvl++) {
                 logWarning("題圖模型不協調", `題目 ${q.id}`, `題目為長度/彩帶，但使用了 ${itype} 模型`, text);
             }
         }
+        // 長條吐司應使用 bread-bar
+        if (text.includes('吐司')) {
+            if (!itype.includes('bread-bar') && !itype.includes('bar')) {
+                modelMismatches++;
+                logWarning("題圖模型不協調", `題目 ${q.id}`, `題目為長條吐司，但使用了 ${itype} 模型`, text);
+            }
+        }
     });
 }
 
 if (modelMismatches === 0) {
-    logPass("題圖情境 100% 精準對齊：盒裝(discrete)、液體(bread/cylinder)、彩帶(ribbon)、圓餅(pie) 模型無錯置");
+    logPass("題圖情境 100% 精準對齊：盒裝(discrete)、液體(bread/cylinder)、彩帶(ribbon)、長條吐司(bread-bar)、圓餅(pie) 模型無錯置");
 }
 
 // ----------------------------------------------------

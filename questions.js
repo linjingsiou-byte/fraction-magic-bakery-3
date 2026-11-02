@@ -68,7 +68,7 @@ const gameQuestions = {
             type: "choice",
             options: ["5/5條吐司比較長", "1條吐司比較長", "一樣長"],
             answer: "一樣長",
-            visual: { totalSlices: 5, targetSlices: 5, interactiveType: "pie" },
+            visual: { totalSlices: 5, targetSlices: 5, interactiveType: "bread-bar" },
             feedback: {
                 wrongChoices: {
                     "5/5條吐司比較長": "不對喔！5/5就是拿了全部5份，剛好就是1條完整的吐司，所以一樣長呢。",

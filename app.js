@@ -1007,7 +1007,9 @@ class MagicBakeryApp {
             info = { name: '大餅', emoji: '🥞', unit: '塊', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
         } else if (text.includes('蛋糕')) {
             info = { name: '蛋糕', emoji: '🍰', unit: '個', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
-        } else if (text.includes('麵包') || text.includes('吐司')) {
+        } else if (text.includes('吐司')) {
+            info = { name: '吐司', emoji: '🍞', unit: '條', actionVerb: '切了', actionEmoji: '🔪', category: 'linear' };
+        } else if (text.includes('麵包')) {
             info = { name: '麵包', emoji: '🍞', unit: '塊', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
         }
 
@@ -1118,6 +1120,91 @@ class MagicBakeryApp {
                 this.currentPieSlicesCount = 0;
                 soundEffects.playClick();
                 updatePie();
+            });
+        }
+        
+        // 1.2. 第一關長條吐司等分模型 (bread-bar: 和 1 一樣長)
+        else if (type === 'bread-bar') {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'bread-bar-container';
+
+            // 頂部標題說明卡
+            const titleCard = document.createElement('div');
+            titleCard.className = 'bread-bar-title';
+            titleCard.innerHTML = '🍞 <strong>1 條大吐司</strong>（平分成 ' + q.visual.totalSlices + ' 份長條）';
+            wrapper.appendChild(titleCard);
+
+            // 長條吐司容器 (等分長條模型)
+            const loaf = document.createElement('div');
+            loaf.className = 'bread-bar-loaf';
+            wrapper.appendChild(loaf);
+
+            // 狀態與對齊說明
+            const statusCard = document.createElement('div');
+            statusCard.className = 'bread-bar-status';
+            wrapper.appendChild(statusCard);
+
+            // 操作按鈕
+            const inventory = document.createElement('div');
+            inventory.className = 'drag-inventory';
+            inventory.innerHTML = `
+                <button class="tool-btn" id="btn-add-slice">
+                    ${this.formatMathText('🍞 放入 1/' + q.visual.totalSlices + ' 條吐司')}
+                </button>
+                <button class="tool-btn" id="btn-clear-slices" style="border-color: var(--accent-strawberry); color: var(--accent-strawberry);">
+                    🗑️ 清空
+                </button>
+            `;
+            wrapper.appendChild(inventory);
+            container.appendChild(wrapper);
+
+            // 當前放入切片數
+            this.currentBreadBarCount = 0;
+
+            const updateBreadBar = () => {
+                loaf.innerHTML = '';
+                for (let i = 0; i < q.visual.totalSlices; i++) {
+                    const slice = document.createElement('div');
+                    slice.className = 'bread-bar-slice';
+
+                    if (i < this.currentBreadBarCount) {
+                        slice.classList.add('filled');
+                        slice.innerHTML = '<span class="slice-emoji">🍞</span><span class="slice-label">第' + (i+1) + '份</span>';
+                    } else {
+                        slice.innerHTML = '<span class="slice-label">1/' + q.visual.totalSlices + '</span>';
+                    }
+                    loaf.appendChild(slice);
+                }
+
+                if (this.currentBreadBarCount === 0) {
+                    statusCard.innerHTML = '點擊下方按鈕，把吐司長條排排看 🍞';
+                } else if (this.currentBreadBarCount < q.visual.totalSlices) {
+                    statusCard.innerHTML = '目前已放入 <span class="fraction inline-frac"><span class="num-row"><span>' + this.currentBreadBarCount + '</span></span><span class="den-row"><span>' + q.visual.totalSlices + '</span></span></span> 條吐司';
+                } else {
+                    statusCard.innerHTML = '✨ <strong>' + q.visual.totalSlices + '/' + q.visual.totalSlices + ' 條吐司剛好排滿 1 整條吐司！所以兩者一樣長！</strong>';
+                    statusCard.style.color = 'var(--accent-gold)';
+                }
+            };
+
+            updateBreadBar();
+
+            wrapper.querySelector('#btn-add-slice').addEventListener('click', () => {
+                if (this.currentBreadBarCount < q.visual.totalSlices) {
+                    this.currentBreadBarCount++;
+                    soundEffects.playClick();
+                    if (this.currentBreadBarCount === q.visual.totalSlices) {
+                        soundEffects.playMagic();
+                    }
+                    updateBreadBar();
+                } else {
+                    ttsManager.speak('整條大吐司已經排滿 ' + q.visual.totalSlices + ' 份了呢，剛好等於 1 條吐司喔。');
+                }
+            });
+
+            wrapper.querySelector('#btn-clear-slices').addEventListener('click', () => {
+                this.currentBreadBarCount = 0;
+                soundEffects.playClick();
+                updateBreadBar();
             });
         }
         
@@ -1489,6 +1576,27 @@ class MagicBakeryApp {
             name2 = '巧克力餅乾';
             bg1 = '#ff6b6b';
             bg2 = '#8d6e63';
+        } else if (text.includes('草莓') && text.includes('芒果')) {
+            icon1 = '🍓';
+            icon2 = '🥭';
+            name1 = '草莓';
+            name2 = '芒果';
+            bg1 = '#ff6b6b';
+            bg2 = '#fcc419';
+        } else if (text.includes('綠豆椪') && text.includes('蛋黃酥')) {
+            icon1 = '🥮';
+            icon2 = '🥮';
+            name1 = '綠豆椪';
+            name2 = '蛋黃酥';
+            bg1 = '#51cf66';
+            bg2 = '#ffd43b';
+        } else if (text.includes('鳳梨酥')) {
+            icon1 = '🍍';
+            icon2 = '🍍';
+            name1 = text.includes('阿明') ? '阿明吃的' : '第一份';
+            name2 = text.includes('小麗') ? '小麗吃的' : '第二份';
+            bg1 = '#fcc419';
+            bg2 = '#ff922b';
         } else if (text.includes('甜甜圈')) {
             icon1 = '🍩';
             icon2 = '🍩';
@@ -1558,7 +1666,14 @@ class MagicBakeryApp {
         infoCard.style.textAlign = 'center';
         infoCard.style.fontWeight = '700';
         infoCard.style.fontSize = '1.05rem';
-        infoCard.innerHTML = `✨ 兩種合起來，總共是 <span class="fraction inline-frac"><span class="num-row"><span>${initial + add}</span></span><span class="den-row"><span>${total}</span></span></span> 盒！`;
+        let categoryName = '盒';
+        if (text.includes('水果')) categoryName = '盒水果';
+        else if (text.includes('糕點')) categoryName = '盒糕點';
+        else if (text.includes('甜甜圈')) categoryName = '盒甜甜圈';
+        else if (text.includes('鳳梨酥')) categoryName = '盒鳳梨酥';
+        else if (text.includes('果凍')) categoryName = '盒果凍';
+        else if (text.includes('餅乾')) categoryName = '盒餅乾';
+        infoCard.innerHTML = `✨ 兩種合起來，總共是 <span class="fraction inline-frac"><span class="num-row"><span>${initial + add}</span></span><span class="den-row"><span>${total}</span></span></span> ${categoryName}！`;
         wrapper.appendChild(infoCard);
 
         container.appendChild(wrapper);
@@ -1711,6 +1826,24 @@ class MagicBakeryApp {
         const initial = q.visual.initialSlices || q.visual.initialItems;
         const sub = q.visual.subSlices || q.visual.subItems;
 
+        const isPencilProblem = itemInfo.name === '鉛筆';
+        const icon = itemInfo.emoji;
+
+        // 頂部說明：清楚標示原有量與總平分數 (讓學生一眼看出分母與分子)
+        const headerCard = document.createElement('div');
+        headerCard.className = 'cut-status-tag';
+        headerCard.className = 'cut-status-tag';
+        headerCard.style.padding = '6px 16px';
+        headerCard.style.background = 'rgba(255, 255, 255, 0.08)';
+        headerCard.style.borderRadius = '12px';
+        headerCard.style.border = '1px solid var(--accent-gold)';
+        headerCard.style.fontSize = '1.02rem';
+        headerCard.style.fontWeight = '700';
+        headerCard.style.color = 'var(--text-light)';
+        headerCard.style.marginBottom = '6px';
+        headerCard.innerHTML = `${icon} 原來有 <span class="fraction inline-frac"><span class="num-row"><span>${initial}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}${itemInfo.name}（整份平分成 ${total} 份）`;
+        wrapper.appendChild(headerCard);
+
         // 老鼠圖案
         const mouse = document.createElement('div');
         mouse.className = 'mouse-thief';
@@ -1720,9 +1853,6 @@ class MagicBakeryApp {
         // 離散量點心格
         const grid = document.createElement('div');
         grid.className = 'cookie-box-grid';
-
-        const isPencilProblem = itemInfo.name === '鉛筆';
-        const icon = itemInfo.emoji;
         
         // 如果是離散量包覆框，則放一個邊框框
         const groupOutline = document.createElement('div');
@@ -1736,13 +1866,20 @@ class MagicBakeryApp {
         for (let i = 0; i < total; i++) {
             const item = document.createElement('div');
             item.className = 'discrete-item';
-            item.innerText = icon;
 
             if (i < initial) {
                 item.classList.add('filled');
+                item.innerText = icon;
+                item.title = `第 ${i + 1} 份${itemInfo.name}`;
             } else {
-                item.style.opacity = '0'; // 未放滿
+                // 原本就空著的份數 (未填滿的槽位，以虛線框和淡影清楚表示，讓總數 total 一覽無遺！)
+                item.classList.add('empty-slot');
+                item.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                item.style.border = '2px dashed rgba(255, 255, 255, 0.25)';
+                item.style.boxShadow = 'none';
                 item.style.pointerEvents = 'none';
+                item.innerHTML = `<span style="opacity: 0.22; filter: grayscale(1); font-size: 1.25rem;">${icon}</span>`;
+                item.title = `第 ${i + 1} 份 (原本已空)`;
             }
 
             // 被減數點選事件：將已有的點心「移走」或「咬掉」
@@ -1793,8 +1930,13 @@ class MagicBakeryApp {
 
         wrapper.appendChild(grid);
 
-        // 加上老鼠偷吃提示按鈕 (單位精準對齊題目：枝、塊、顆、個)
-        const subUnit = isPencilProblem ? '枝' : (itemInfo.name === '大餅' ? '塊' : ((itemInfo.name === '巧克力' || itemInfo.name === '櫻桃') ? '顆' : '個'));
+        // 加上老鼠偷吃提示按鈕 (單位精準對齊題目：枝、塊、顆、杯、段、個)
+        let subUnit = '個';
+        if (itemInfo.name === '鉛筆') subUnit = '枝';
+        else if (itemInfo.name === '大餅' || itemInfo.name === '蛋糕' || itemInfo.name === '鬆餅') subUnit = '塊';
+        else if (itemInfo.name === '巧克力' || itemInfo.name === '櫻桃') subUnit = '顆';
+        else if (itemInfo.category === 'liquid') subUnit = '杯';
+        else if (itemInfo.category === 'linear') subUnit = '段';
         const tipBtn = document.createElement('button');
         tipBtn.className = 'tool-btn';
         tipBtn.innerHTML = `🐭 召喚小偷老鼠${itemInfo.actionVerb} ${sub} ${subUnit}`;
@@ -1866,6 +2008,28 @@ class MagicBakeryApp {
         this.ribbonIsCut = false;
         this.cutSegmentsCount = 0; // 被扣除的段數
 
+        // 頂部說明卡：標記 1 換成 B/B 的等分過程
+        const headerCard = document.createElement('div');
+        headerCard.className = 'cut-status-tag';
+        headerCard.style.padding = '6px 18px';
+        headerCard.style.background = 'rgba(255, 255, 255, 0.08)';
+        headerCard.style.borderRadius = '12px';
+        headerCard.style.border = '1px solid var(--accent-gold)';
+        headerCard.style.fontSize = '1.02rem';
+        headerCard.style.fontWeight = '700';
+        headerCard.style.color = 'var(--text-light)';
+        headerCard.style.marginBottom = '8px';
+
+        const updateHeader = () => {
+            if (!this.ribbonIsCut) {
+                headerCard.innerHTML = `${itemInfo.emoji} 完整 1 ${itemInfo.unit}${itemInfo.name}（尚未平分）`;
+            } else {
+                headerCard.innerHTML = `✨ <strong>1 ${itemInfo.unit} ＝ <span class="fraction inline-frac"><span class="num-row"><span>${total}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}</strong>（已平分成 ${total} 份，每份是 <span class="fraction inline-frac"><span class="num-row"><span>1</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}）`;
+            }
+        };
+        updateHeader();
+        wrapper.appendChild(headerCard);
+
         const renderSegments = () => {
             track.innerHTML = '';
             
@@ -1929,15 +2093,25 @@ class MagicBakeryApp {
                         track.appendChild(dot);
                     } else {
                         const seg = document.createElement('div');
-                        seg.className = 'ribbon-segment';
+                        seg.className = 'ribbon-segment anim-split';
+                        let textColor = '#ffffff';
                         if (isLiquid) {
                             seg.style.backgroundColor = '#74c0fc';
+                            textColor = '#0b4d75';
                         } else if (isWood) {
                             seg.style.backgroundColor = '#bcaaa4';
+                            textColor = '#3e2723';
+                        } else {
+                            seg.style.backgroundColor = 'var(--accent-strawberry)';
+                            textColor = '#ffffff';
                         }
+                        seg.style.color = textColor;
                         
                         if (i < this.cutSegmentsCount) {
                             seg.classList.add('cut'); // 被剪掉/用掉
+                            seg.innerHTML = `<span style="font-size: 1.15rem; line-height: 1;">💨</span><span style="font-size: 0.72rem; opacity: 0.6; text-decoration: line-through;">1/${total}</span>`;
+                        } else {
+                            seg.innerHTML = `<span class="seg-fraction">${this.formatMathText(`1/${total}`)}</span>`;
                         }
 
                         // 點選剪去
@@ -2013,6 +2187,7 @@ class MagicBakeryApp {
         cutBtn.addEventListener('click', () => {
             soundEffects.playMagic();
             this.ribbonIsCut = true;
+            updateHeader();
             renderSegments();
             
             // 更新算式：把 1 換成 B/B（相容單人與 AI 模式）
@@ -2412,6 +2587,21 @@ class MagicBakeryApp {
                     } else {
                         item.classList.remove('filled');
                         item.innerText = '';
+                    }
+                });
+            }
+        } else if (type === 'bread-bar') {
+            const loaf = board.querySelector('.bread-bar-loaf');
+            if (loaf) {
+                this.currentBreadBarCount = num;
+                const slices = loaf.querySelectorAll('.bread-bar-slice');
+                slices.forEach((slice, i) => {
+                    if (i < num) {
+                        slice.classList.add('filled');
+                        slice.innerHTML = '<span class="slice-emoji">🍞</span><span class="slice-label">第' + (i+1) + '份</span>';
+                    } else {
+                        slice.classList.remove('filled');
+                        slice.innerHTML = '<span class="slice-label">1/' + q.visual.totalSlices + '</span>';
                     }
                 });
             }
@@ -2825,18 +3015,54 @@ class MagicBakeryApp {
 
         if (numAns === targetNumAns && denAns === targetDenAns) {
             soundEffects.playCorrect();
-            feedbackEl.innerText = "答對了！🧁 +10分";
+            feedbackEl.innerText = "答對了！🧁 搶先奪得 10 分！";
             feedbackEl.className = "battle-feedback correct";
             
             if (playerNum === 1) {
                 this.p1Score += 10;
                 document.getElementById('p1-score').innerText = `${this.p1Score} 分`;
-                this.p1Answered = true;
             } else {
                 this.p2Score += 10;
                 document.getElementById('p2-score').innerText = `${this.p2Score} 分`;
-                this.p2Answered = true;
             }
+
+            // 【方案 A：搶先奪分制】一人答對立即終止本題作答並結算！
+            this.p1Answered = true;
+            this.p2Answered = true;
+
+            const otherPlayerNum = playerNum === 1 ? 2 : 1;
+            const otherFeedbackEl = document.getElementById(`p${otherPlayerNum}-feedback`);
+            if (otherFeedbackEl) {
+                otherFeedbackEl.innerText = "慢了一步！對手已搶先答對 ⚡";
+                otherFeedbackEl.className = "battle-feedback wrong";
+            }
+
+            // 更新中央狀態列提示
+            const statusBar = document.getElementById('battle-status-bar');
+            const statusIcon = document.getElementById('battle-status-icon');
+            const statusText = document.getElementById('battle-status-text');
+            if (statusBar && statusText) {
+                statusBar.className = 'battle-status-bar ready';
+                if (statusIcon) statusIcon.textContent = '🏆';
+                const winnerName = playerNum === 1 ? '玩家 1 (藍)' : '玩家 2 (粉)';
+                statusText.innerHTML = `🏆 <strong>${winnerName} 搶先答對！</strong> 獨得 10 分！即將進入下一題...`;
+            }
+
+            // 鎖定雙方面板，防止多餘點擊與抄襲
+            const p1Side = document.getElementById('p1-side');
+            const p2Side = document.getElementById('p2-side');
+            if (p1Side) p1Side.classList.add('cooling');
+            if (p2Side) p2Side.classList.add('cooling');
+
+            // 立即停止本題計時器
+            clearInterval(this.battleTimerInterval);
+
+            // 1.5 秒後流暢進入下一題
+            if (this.battleNextQuestionTimeout) clearTimeout(this.battleNextQuestionTimeout);
+            this.battleNextQuestionTimeout = setTimeout(() => {
+                if (this.isBattleActive) this.nextBattleQuestion();
+            }, 1500);
+            return;
         } else {
             soundEffects.playWrong();
             feedbackEl.innerText = "答錯了！再試試";
@@ -2851,27 +3077,36 @@ class MagicBakeryApp {
                 document.getElementById('p2-score').innerText = `${this.p2Score} 分`;
             }
         }
-
-        // 檢查雙方是否都已作答完畢
-        if (this.p1Answered && this.p2Answered) {
-            clearInterval(this.battleTimerInterval);
-            if (this.battleNextQuestionTimeout) clearTimeout(this.battleNextQuestionTimeout);
-            this.battleNextQuestionTimeout = setTimeout(() => {
-                if (this.isBattleActive) this.nextBattleQuestion();
-            }, 1500);
-        }
     }
 
     handleBattleTimeout() {
-        // 時間到，沒答對的玩家顯示逾時
-        if (!this.p1Answered) {
-            document.getElementById('p1-feedback').innerText = "時間到！⏰";
-            document.getElementById('p1-feedback').className = "battle-feedback wrong";
+        // 時間到，雙方皆鎖定
+        this.p1Answered = true;
+        this.p2Answered = true;
+
+        const p1Feedback = document.getElementById('p1-feedback');
+        const p2Feedback = document.getElementById('p2-feedback');
+        if (p1Feedback) {
+            p1Feedback.innerText = "時間到！⏰";
+            p1Feedback.className = "battle-feedback wrong";
         }
-        if (!this.p2Answered) {
-            document.getElementById('p2-feedback').innerText = "時間到！⏰";
-            document.getElementById('p2-feedback').className = "battle-feedback wrong";
+        if (p2Feedback) {
+            p2Feedback.innerText = "時間到！⏰";
+            p2Feedback.className = "battle-feedback wrong";
         }
+
+        const statusBar = document.getElementById('battle-status-bar');
+        const statusIcon = document.getElementById('battle-status-icon');
+        const statusText = document.getElementById('battle-status-text');
+        if (statusBar && statusText) {
+            if (statusIcon) statusIcon.textContent = '⏰';
+            statusText.innerHTML = '⏰ <strong>時間到！</strong> 雙方皆未在時限內搶答成功。即將進入下一題...';
+        }
+
+        const p1Side = document.getElementById('p1-side');
+        const p2Side = document.getElementById('p2-side');
+        if (p1Side) p1Side.classList.add('cooling');
+        if (p2Side) p2Side.classList.add('cooling');
 
         if (this.battleNextQuestionTimeout) clearTimeout(this.battleNextQuestionTimeout);
         this.battleNextQuestionTimeout = setTimeout(() => {
