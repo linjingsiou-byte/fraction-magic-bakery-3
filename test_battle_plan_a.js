@@ -5,7 +5,7 @@ const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const htmlPath = 'file:///' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/');
 
 (async () => {
-    console.log('[TEST-BATTLE] 啟動雙人對戰【方案 A：搶先奪分制】E2E 驗證...');
+    console.log('[TEST-BATTLE] 啟動雙人對決標準規格（思考緩衝＋防偷跑震動＋搶先奪分）E2E 驗證...');
 
     const browser = await puppeteer.launch({
         executablePath: chromePath,
@@ -15,65 +15,103 @@ const htmlPath = 'file:///' + path.resolve(__dirname, 'index.html').replace(/\\/
 
     try {
         const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
         await page.goto(htmlPath, { waitUntil: 'load' });
         const wait = ms => new Promise(r => setTimeout(r, ms));
 
-        // 1. 從大廳進入雙人對戰模式選擇
-        console.log('[TEST-BATTLE] 點擊進入雙人模式...');
+        // 1. 驗證大廳設定畫面與秘笈彈窗文案
+        console.log('[TEST-BATTLE] 1. 驗證對決設定畫面賽制說明標籤...');
         await page.click('#btn-mode-double');
-        await wait(500);
+        await wait(300);
 
-        // 2. 選擇 5 題、同分母加法
-        await page.evaluate(() => {
-            const countBtn = document.querySelector('#battle-count-select .opt-btn[data-count="5"]');
-            if (countBtn) countBtn.click();
-        });
-        await wait(200);
+        const rulesText = await page.$eval('.duel-special-rules', el => el.textContent.trim());
+        console.log('對決說明標籤內容:\n', rulesText);
+        if (!rulesText.includes('3 秒讀題思考') || !rulesText.includes('極速搶答爭奪') || !rulesText.includes('率先達標獲勝')) {
+            throw new Error('對決設定畫面缺少官方三步驟規範文案！');
+        }
+        console.log('✔ 對決設定畫面規則小標籤驗證通過！');
 
-        // 3. 開始對戰
+        console.log('[TEST-BATTLE] 驗證遊戲秘笈彈窗雙人對決賽制說明...');
+        await page.click('#btn-lobby-secret-guide');
+        await wait(300);
+        const guideText = await page.$eval('#modal-secret-guide', el => el.textContent.trim());
+        if (!guideText.includes('雙人對決賽制說明') || !guideText.includes('3 秒讀題思考') || !guideText.includes('極速搶答爭奪')) {
+            throw new Error('秘笈彈窗缺少雙人對決賽制說明！');
+        }
+        await page.click('#btn-close-guide');
+        await wait(300);
+        console.log('✔ 遊戲秘笈彈窗雙人對決賽制說明驗證通過！');
+
+        // 2. 點擊開始雙人烘焙對決
+        console.log('[TEST-BATTLE] 2. 點擊開始雙人對決...');
         await page.click('#btn-start-battle');
         await wait(400);
 
-        // 檢查是否進入 screen-double-play
-        const isDoubleScreen = await page.evaluate(() => {
-            return document.getElementById('screen-double-play').classList.contains('active');
-        });
-        if (!isDoubleScreen) throw new Error('未成功進入雙人對戰畫面！');
-        console.log('✔ 成功進入雙人對戰畫面。');
+        // 3. 驗證 3.0 秒讀題思考期與防偷跑攔截
+        console.log('[TEST-BATTLE] 3. 驗證 3.0 秒讀題思考期狀態與防偷跑攔截...');
+        let isThinking = await page.evaluate(() => window.app.isBattleThinkingPhase);
+        if (!isThinking) {
+            throw new Error('開題後未進入 isBattleThinkingPhase！');
+        }
 
-        // 等待 3 秒思考倒數結束
-        console.log('[TEST-BATTLE] 等待 3 秒讀題思考緩衝期...');
-        await wait(3300);
+        // 模擬在思考期內點擊玩家 1 面板（偷按）
+        console.log('[TEST-BATTLE] 模擬思考期偷按玩家 1 鍵盤/面板...');
+        await page.click('#btn-p1-submit');
+        await wait(100);
 
-        // 檢查思考期已結束
-        const isThinkingDone = await page.evaluate(() => {
-            return !window.app.isBattleThinkingPhase;
-        });
-        if (!isThinkingDone) throw new Error('思考期結束狀態異常！');
-        console.log('✔ 讀題思考期順利結束，進入競速階段。');
+        const p1FeedbackDuringThinking = await page.evaluate(() => document.getElementById('p1-feedback').innerText);
+        const p1HasShake = await page.evaluate(() => document.getElementById('p1-side').classList.contains('shake-warn'));
+        console.log('思考期偷按反饋:', p1FeedbackDuringThinking, '震動動畫:', p1HasShake);
+        if (!p1FeedbackDuringThinking.includes('請先讀題思考')) {
+            throw new Error(`思考期偷按未跳出正確警示文字: ${p1FeedbackDuringThinking}`);
+        }
+        if (!p1HasShake) {
+            throw new Error('思考期偷按未觸發 shake-warn 震動樣式！');
+        }
+        console.log('✔ 防偷跑攔截與震動警示完美生效！');
 
-        // 4. 模擬玩家 1 搶先填寫正確答案並送出
+        // 4. 等待讀題思考期結束（3 秒）
+        console.log('[TEST-BATTLE] 4. 等待思考緩衝倒數歸零...');
+        await wait(2800);
+
+        isThinking = await page.evaluate(() => window.app.isBattleThinkingPhase);
+        if (isThinking) {
+            await wait(500);
+        }
+
+        const statusBarText = await page.evaluate(() => document.getElementById('battle-status-text').innerText);
+        console.log('開放作答狀態列:', statusBarText);
+        if (!statusBarText.includes('競速開始') || !statusBarText.includes('提交配方')) {
+            throw new Error(`開放作答狀態文字不符預期: ${statusBarText}`);
+        }
+        console.log('✔ 讀題思考期結束，開搶提示生效，進入競速階段！');
+
+        // 5. 模擬玩家 1 搶先算對並送出
+        console.log('[TEST-BATTLE] 5. 模擬玩家 1 搶先填入正確答案並送出...');
         const qInfo = await page.evaluate(() => {
-            const app = window.app;
-            const q = app.battleQuestions[app.battleCurrentQuestionIdx];
-            const targetNum = q.answer.numAns !== undefined ? q.answer.numAns : q.answer.num;
-            const targetDen = q.answer.denAns !== undefined ? q.answer.denAns : q.answer.den;
-
-            // 填寫玩家 1
-            const p1Num = document.querySelector('#p1-equation .frac-input-num');
-            const p1Den = document.querySelector('#p1-equation .frac-input-den');
-            if (p1Num) p1Num.innerText = targetNum;
-            if (p1Den) p1Den.innerText = targetDen;
-
+            const q = window.app.battleQuestions[window.app.battleCurrentQuestionIdx];
+            let targetNum = q.answer.numAns !== undefined ? q.answer.numAns : q.answer.num;
+            let targetDen = q.answer.denAns !== undefined ? q.answer.denAns : q.answer.den;
+            if (q.type === 'equation-whole-sub') {
+                targetNum = q.answer.numAns;
+                targetDen = q.answer.denAns;
+            }
             return { targetNum, targetDen };
         });
-        console.log(`[TEST-BATTLE] 第 1 題正確答案: ${qInfo.targetNum}/${qInfo.targetDen}`);
 
-        // 玩家 1 送出
+        console.log('[TEST-BATTLE] 當前題正確答案:', `${qInfo.targetNum}/${qInfo.targetDen}`);
+
+        await page.evaluate((target) => {
+            const p1Num = document.querySelector('#p1-equation .frac-input-num');
+            const p1Den = document.querySelector('#p1-equation .frac-input-den');
+            if (p1Num) p1Num.innerText = target.targetNum;
+            if (p1Den) p1Den.innerText = target.targetDen;
+        }, qInfo);
+
         await page.click('#btn-p1-submit');
         await wait(300);
 
-        // 5. 驗證玩家 1 與玩家 2 的即時反饋狀態
+        // 驗證搶先奪分狀態
         const battleState = await page.evaluate(() => {
             const p1Feedback = document.getElementById('p1-feedback').innerText;
             const p2Feedback = document.getElementById('p2-feedback').innerText;
@@ -82,7 +120,6 @@ const htmlPath = 'file:///' + path.resolve(__dirname, 'index.html').replace(/\\/
             const p1Cooling = document.getElementById('p1-side').classList.contains('cooling');
             const p2Cooling = document.getElementById('p2-side').classList.contains('cooling');
             const statusText = document.getElementById('battle-status-text').innerText;
-
             return {
                 p1Feedback,
                 p2Feedback,
@@ -98,7 +135,7 @@ const htmlPath = 'file:///' + path.resolve(__dirname, 'index.html').replace(/\\/
 
         console.log('[TEST-BATTLE] 搶先奪分狀態核驗：', battleState);
 
-        if (!battleState.p1Feedback.includes('搶先奪得 10 分')) {
+        if (!battleState.p1Feedback.includes('烘焙成功') || !battleState.p1Feedback.includes('+10 分')) {
             throw new Error(`玩家 1 反饋未符合搶先奪分預期: ${battleState.p1Feedback}`);
         }
         if (!battleState.p2Feedback.includes('慢了一步')) {
@@ -129,7 +166,7 @@ const htmlPath = 'file:///' + path.resolve(__dirname, 'index.html').replace(/\\/
         console.log('✔ 防作弊防禦生效：玩家 2 被鎖定後點擊送出無效，依然維持 0 分！');
 
         // 7. 等待 1.5 秒自動換題
-        console.log('[TEST-BATTLE] 等待切換到第 2 題...');
+        console.log('[TEST-BATTLE] 7. 等待切換到下一題...');
         await wait(1600);
 
         const currentQIdx = await page.evaluate(() => window.app.battleCurrentQuestionIdx);
@@ -138,7 +175,8 @@ const htmlPath = 'file:///' + path.resolve(__dirname, 'index.html').replace(/\\/
         }
         console.log('✔ 1.5 秒後流暢進入第 2 題！');
 
-        console.log('\n🎉 [PASS] 雙人對戰【方案 A：搶先奪分制】E2E 自動化測試全部通過！');
+        console.log('🎉🎉🎉 [SUCCESS] 雙人對決標準規格全套驗證 100% 通過！');
+
     } catch (err) {
         console.error('❌ [FAIL] 測試失敗：', err);
         process.exit(1);

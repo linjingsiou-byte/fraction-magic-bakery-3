@@ -222,6 +222,20 @@ class MagicBakeryApp {
             this.startBattleGame();
         });
 
+        // 綁定雙人對戰思考期防偷跑點擊攔截器 (Capture 模式)
+        [1, 2].forEach(pNum => {
+            const panel = document.getElementById(`p${pNum}-side`);
+            if (!panel) return;
+            panel.addEventListener('pointerdown', (e) => {
+                if (this.isBattleThinkingPhase) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    soundEffects.playSoftClick();
+                    this.triggerBattleSideShake(pNum);
+                }
+            }, true);
+        });
+
         // 返回大廳
         document.getElementById('btn-single-back-lobby').addEventListener('click', () => {
             soundEffects.playClick();
@@ -2744,7 +2758,7 @@ class MagicBakeryApp {
             statusBar.className = 'battle-status-bar ready';
             if (statusIcon) statusIcon.textContent = '⚡';
             if (statusText) {
-                statusText.innerHTML = '⚡ <strong>競速開始！</strong>快動手計算並填寫答案送出！';
+                statusText.innerHTML = '⚡ <strong>競速開始！</strong>快動手計算並提交配方！';
             }
         }
 
@@ -2960,10 +2974,10 @@ class MagicBakeryApp {
         }
         const feedbackEl = document.getElementById(`p${playerNum}-feedback`);
         if (feedbackEl) {
-            feedbackEl.innerText = "👀 請先看題思考喔！倒數結束後才能開始作答！";
+            feedbackEl.innerText = "⏳ 請先讀題思考喔！倒數結束後才開放作答！";
             feedbackEl.className = "battle-feedback wrong";
             setTimeout(() => {
-                if (this.isBattleThinkingPhase && feedbackEl.innerText.includes("請先看題思考")) {
+                if (this.isBattleThinkingPhase && feedbackEl.innerText.includes("請先讀題思考")) {
                     feedbackEl.innerText = "";
                 }
             }, 1800);
@@ -3015,7 +3029,7 @@ class MagicBakeryApp {
 
         if (numAns === targetNumAns && denAns === targetDenAns) {
             soundEffects.playCorrect();
-            feedbackEl.innerText = "答對了！🧁 搶先奪得 10 分！";
+            feedbackEl.innerText = "答對了！🧁 搶先烘焙成功！+10 分！";
             feedbackEl.className = "battle-feedback correct";
             
             if (playerNum === 1) {
@@ -3044,8 +3058,8 @@ class MagicBakeryApp {
             if (statusBar && statusText) {
                 statusBar.className = 'battle-status-bar ready';
                 if (statusIcon) statusIcon.textContent = '🏆';
-                const winnerName = playerNum === 1 ? '玩家 1 (藍)' : '玩家 2 (粉)';
-                statusText.innerHTML = `🏆 <strong>${winnerName} 搶先答對！</strong> 獨得 10 分！即將進入下一題...`;
+                const winnerName = playerNum === 1 ? '紅方烘焙師 (左)' : '藍方烘焙師 (右)';
+                statusText.innerHTML = `🎉 <strong>${winnerName} 搶先烘焙成功！+1 🧁</strong> 即將進入下一題...`;
             }
 
             // 鎖定雙方面板，防止多餘點擊與抄襲

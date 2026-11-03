@@ -465,6 +465,30 @@ button {
     background-color: var(--border-color);
 }
 
+/* ==================== 雙人對決賽制說明小標籤 ==================== */
+.duel-special-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 600px;
+    margin: 0 auto 24px auto;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(229, 169, 60, 0.4);
+    border-radius: 14px;
+    padding: 12px 18px;
+    text-align: left;
+}
+
+.rule-tag {
+    font-size: 1.02rem; /* >= 12pt / 16px */
+    line-height: 1.6;
+    color: var(--text-light);
+}
+
+.rule-tag strong {
+    color: var(--accent-gold);
+}
+
 /* 主遊戲按鈕 */
 .start-game-btn {
     background: linear-gradient(135deg, var(--accent-gold) 0%, #d38d22 100%);
@@ -1476,11 +1500,31 @@ button {
 }
 
 /* 冷卻期間玩家側面板鎖定樣式 (Thinking Phase / Post-Answer Lock) */
+.player-side.cooling {
+    position: relative;
+    user-select: none;
+}
+
+.player-side.cooling::after {
+    content: "⏳ 思考時間・鎖定中";
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #ffd166;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 12px;
+    pointer-events: none;
+    border: 1px solid rgba(255, 209, 102, 0.4);
+    z-index: 10;
+}
+
 .player-side.cooling .battle-keyboard,
 .player-side.cooling .battle-submit-btn,
 .player-side.cooling .battle-equation-display,
 .player-side.cooling .battle-interaction {
-    pointer-events: none;
     filter: grayscale(0.4);
     opacity: 0.65;
     cursor: not-allowed;
@@ -1493,13 +1537,15 @@ button {
 
 /* 思考期間偷按震動警示 */
 .shake-warn {
-    animation: shake-element 0.35s ease-in-out !important;
+    animation: shake-element 0.4s ease-in-out !important;
+    border-color: #ef476f !important;
+    box-shadow: 0 0 20px rgba(239, 71, 111, 0.6) !important;
 }
 
 @keyframes shake-element {
     0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-6px); }
-    40%, 80% { transform: translateX(6px); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
 }
 
 .battle-workspace {
