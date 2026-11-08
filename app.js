@@ -183,23 +183,16 @@ class MagicBakeryApp {
             }
         });
 
-        // 關卡地圖節點選擇 (單人)
+        // 關卡地圖節點選擇 (單人：支援自由自選關卡)
         document.querySelectorAll('.level-node').forEach(node => {
             node.addEventListener('click', (e) => {
                 const targetNode = e.currentTarget;
-                if (targetNode.classList.contains('locked')) {
-                    soundEffects.playWrong();
-                    ttsManager.speak("這關鎖住了，請先完成前一關的修練呢。");
-                    return;
-                }
-                
                 soundEffects.playClick();
                 const lvl = parseInt(targetNode.getAttribute('data-level'));
                 this.selectedSingleLevel = lvl;
                 
-                // 更新高亮狀態
-                document.querySelectorAll('.level-node').forEach(n => n.classList.remove('active'));
-                targetNode.classList.add('active');
+                // 更新全部關卡節點選取狀態與按鈕提示
+                this.updateLevelNodes();
                 
                 const names = ["", "第一關魔法麵包拼拼樂", "第二關魔法吐司大烤爐", "第三關老鼠小偷的挑戰", "第四關神奇彩帶裝飾秀"];
                 ttsManager.speak(`你選擇了 ${names[lvl]}，準備好就可以出發呢。`);
@@ -437,33 +430,30 @@ class MagicBakeryApp {
         }
     }
 
-    // 更新地圖節點解鎖狀態
+    // 更新地圖節點狀態（支援全關卡自由自選）
     updateLevelNodes() {
         const nodes = document.querySelectorAll('.level-node');
         nodes.forEach((node, idx) => {
             const lvl = idx + 1;
+            // 自由自選模式：不再附加 locked 鎖定類別，所有關卡皆可點選
             node.classList.remove('completed', 'locked', 'active');
             
             if (this.selectedSingleLevel === lvl) {
                 node.classList.add('active');
             }
 
-            if (lvl === 1) {
-                // 第一關預設解鎖
-            } else {
-                const prevCompleted = this.completedLevels[lvl - 2];
-                if (!prevCompleted) {
-                    node.classList.add('locked');
-                }
-            }
-
             if (this.completedLevels[idx]) {
                 node.classList.add('completed');
             }
         });
+
+        // 同步更新大廳開始按鈕文字
+        const startBtn = document.getElementById('btn-start-single');
+        if (startBtn) {
+            startBtn.innerText = `開始第 ${this.selectedSingleLevel} 關修練之旅 ✨`;
+        }
     }
 
-    // ==========================================================
     // ==================== 單人遊玩模式 ========================
     // ==========================================================
     startSingleGame(level) {
@@ -943,6 +933,17 @@ class MagicBakeryApp {
         return el && el.innerText !== '?' ? el.innerText : null;
     }
 
+    // 依據離散量總數計算最理想的每列欄數 (Grid Columns)
+    getDiscreteGridCols(total) {
+        if (total === 12) return 6; // 6x2 (符合生活情境與使用者需求：一列6個)
+        if (total === 10) return 5; // 5x2 (符合10入禮盒/雞蛋盒)
+        if (total === 8) return 4;  // 4x2
+        if (total === 6) return 6;  // 6x1
+        if (total <= 5) return total; // 1列置中
+        return Math.min(total, 6);
+    }
+
+
     // 智慧題目物品解析：精準提取名稱、圖標、單位與操作動作
     getQuestionItemInfo(q) {
         const text = (q && q.text) ? q.text : '';
@@ -1262,8 +1263,10 @@ class MagicBakeryApp {
             const updateDiscrete = () => {
                 grid.innerHTML = '';
                 // 渲染容器外框
+                const cols = this.getDiscreteGridCols(q.visual.totalItems);
                 const groupOutline = document.createElement('div');
                 groupOutline.className = 'box-group-outline';
+                groupOutline.style.gridTemplateColumns = `repeat(${cols}, auto)`;
                 grid.appendChild(groupOutline);
 
                 for (let i = 0; i < q.visual.totalItems; i++) {
@@ -1275,7 +1278,7 @@ class MagicBakeryApp {
                     } else {
                         item.innerText = '';
                     }
-                    grid.appendChild(item);
+                    groupOutline.appendChild(item);
                 }
 
                 // 同步更新分子/分母輸入框 (學童操作配料盤時自動連動)
@@ -1645,8 +1648,10 @@ class MagicBakeryApp {
         grid.className = 'cookie-box-grid';
         grid.style.marginTop = '5px';
 
+        const cols = this.getDiscreteGridCols(total);
         const groupOutline = document.createElement('div');
         groupOutline.className = 'box-group-outline';
+        groupOutline.style.gridTemplateColumns = `repeat(${cols}, auto)`;
         grid.appendChild(groupOutline);
 
         for (let i = 0; i < total; i++) {
@@ -1869,8 +1874,10 @@ class MagicBakeryApp {
         grid.className = 'cookie-box-grid';
         
         // 如果是離散量包覆框，則放一個邊框框
+        const cols = this.getDiscreteGridCols(total);
         const groupOutline = document.createElement('div');
         groupOutline.className = 'box-group-outline';
+        groupOutline.style.gridTemplateColumns = `repeat(${cols}, auto)`;
         grid.appendChild(groupOutline);
 
         // 目前被學生移走的個數
@@ -2625,6 +2632,10 @@ class MagicBakeryApp {
     finishSingleLevel() {
         soundEffects.playVictory();
         this.completedLevels[this.selectedSingleLevel - 1] = true;
+        const currentCompletedLevel = this.selectedSingleLevel;
+        if (this.selectedSingleLevel < 4) {
+            this.selectedSingleLevel++;
+        }
         this.updateLevelNodes();
 
         // 結算畫面設定

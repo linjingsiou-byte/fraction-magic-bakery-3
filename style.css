@@ -321,6 +321,16 @@ button {
     transition: var(--transition-smooth);
 }
 
+.level-node:hover .node-circle {
+    transform: scale(1.1);
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 12px rgba(229, 169, 60, 0.5);
+}
+
+.level-node:hover .node-name {
+    color: var(--accent-gold);
+}
+
 .node-circle {
     width: 50px;
     height: 50px;
@@ -1114,28 +1124,28 @@ button {
 }
 
 .cookie-box-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 15px;
-    background: #32201b;
-    border: 3px solid var(--accent-gold);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-    position: relative;
-}
-
-/* 虛線分組框 */
-.box-group-outline {
-    grid-column: span 5;
-    border: 2px dashed var(--accent-matcha);
-    border-radius: 12px;
-    padding: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    background: #32201b;
+    border: 3px solid var(--accent-gold);
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+    position: relative;
+    max-width: 95%;
+    margin: 0 auto;
+}
+
+/* 盒裝分組框 (動態依欄數自適應) */
+.box-group-outline {
+    border: 2px dashed var(--accent-matcha);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: grid;
+    gap: 12px 10px;
+    justify-content: center;
+    align-items: center;
     background-color: rgba(142, 182, 122, 0.03);
 }
 
@@ -2835,10 +2845,8 @@ html, body {
     }
 
     .box-group-outline {
-        gap: 6px;
-        padding: 6px;
-        flex-wrap: wrap;
-        justify-content: center;
+        gap: 8px 6px;
+        padding: 8px 6px;
     }
 
     .discrete-item {
