@@ -39,7 +39,7 @@
 - 修改或增補 Word 導覽手冊時，請務必使用版本遞增命名（`_v3.docx`），嚴禁覆蓋既有 `_v1.docx` 與 `_v2.docx` 檔案，且所有文字維持 $\ge 12\text{pt}$。
 
 ## 🕐 最後更新
-- 時間：2026-11-08 16:19
+- 時間：2026-11-08 16:43
 - 更新者：Antigravity @ LAPTOP-C73KGKMS
-- Git 狀態：✅ 已推送到 GitHub main 分支（bbf5400）
+- Git 狀態：✅ 已推送到 GitHub main 分支（62abc45）
 - 評測版本：v3.1 (0 Critical / 0 Warning)
