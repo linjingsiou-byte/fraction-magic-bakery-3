@@ -53,7 +53,7 @@ const gameQuestions = {
         },
         {
             id: "1_4",
-            text: "盤子裡有 4 個 1/4 塊披薩，合起來是 ?/? 個披薩呢？",
+            text: "盤子裡有 4 個 1/4 個披薩，合起來是 ?/? 個披薩呢？",
             type: "fraction-input",
             answer: { num: 4, den: 4 },
             visual: { totalSlices: 4, targetSlices: 4, interactiveType: "pie" },
@@ -107,7 +107,7 @@ const gameQuestions = {
         },
         {
             id: "1_8",
-            text: "桌上有 10 個 1/10 塊小鬆餅，合起來是 ?/? 個小鬆餅呢？",
+            text: "桌上有 10 個 1/10 個小鬆餅，合起來是 ?/? 個小鬆餅呢？",
             type: "fraction-input",
             answer: { num: 10, den: 10 },
             visual: { totalSlices: 10, targetSlices: 10, interactiveType: "pie" },
@@ -161,7 +161,7 @@ const gameQuestions = {
         },
         {
             id: "1_12",
-            text: "盤子裡有 6 個 1/6 塊披薩，合起來是 ?/? 個披薩呢？",
+            text: "盤子裡有 6 個 1/6 個披薩，合起來是 ?/? 個披薩呢？",
             type: "fraction-input",
             answer: { num: 6, den: 6 },
             visual: { totalSlices: 6, targetSlices: 6, interactiveType: "pie" },
@@ -201,7 +201,7 @@ const gameQuestions = {
         },
         {
             id: "1_15",
-            text: "桌上有 9 個 1/9 塊餅乾，合起來是 ?/? 個餅乾呢？",
+            text: "桌上有 9 個 1/9 片餅乾，合起來是 ?/? 塊餅乾呢？",
             type: "fraction-input",
             answer: { num: 9, den: 9 },
             visual: { totalSlices: 9, targetSlices: 9, interactiveType: "pie" },
@@ -400,7 +400,7 @@ const gameQuestions = {
     3: [
         {
             id: "3_1",
-            text: "桌上有 6/10 塊大餅。弟弟吃掉了 2/10 塊。還剩下幾塊大餅呢？",
+            text: "桌上有 1 張大餅平分成 10 塊。桌上有 6/10 張大餅，弟弟吃掉了 2/10 張大餅後，桌上還剩下幾張大餅呢？",
             type: "equation",
             initialEq: "6/10 - 2/10 = ?/?",
             answer: { num1: 6, den1: 10, num2: 2, den2: 10, numAns: 4, denAns: 10 },
@@ -462,7 +462,7 @@ const gameQuestions = {
         },
         {
             id: "3_6",
-            text: "大餅平分成 10 塊。桌上有 9/10 塊。哥哥吃掉 5/10 塊，還剩下幾塊大餅呢？",
+            text: "桌上有 1 張大餅平分成 10 塊。桌上有 9/10 張大餅，哥哥吃掉 5/10 張大餅後，桌上還剩下幾張大餅呢？",
             type: "equation",
             initialEq: "9/10 - 5/10 = ?/?",
             answer: { num1: 9, den1: 10, num2: 5, den2: 10, numAns: 4, denAns: 10 },
@@ -560,7 +560,7 @@ const gameQuestions = {
         },
         {
             id: "3_14",
-            text: "大餅平分成 8 塊。桌上有 7/8 塊大餅。弟弟吃掉 3/8 塊後，桌上還剩下幾塊大餅呢？",
+            text: "桌上有 1 張大餅平分成 8 塊。桌上有 7/8 張大餅，弟弟吃掉 3/8 張大餅後，桌上還剩下幾張大餅呢？",
             type: "equation",
             initialEq: "7/8 - 3/8 = ?/?",
             answer: { num1: 7, den1: 8, num2: 3, den2: 8, numAns: 4, denAns: 8 },

@@ -1019,7 +1019,7 @@ class MagicBakeryApp {
         } else if (text.includes('披薩')) {
             info = { name: '披薩', emoji: '🍕', unit: '個', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
         } else if (text.includes('大餅')) {
-            info = { name: '大餅', emoji: '🥞', unit: '塊', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
+            info = { name: '大餅', emoji: '🥞', unit: '張', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
         } else if (text.includes('蛋糕')) {
             info = { name: '蛋糕', emoji: '🍰', unit: '個', actionVerb: '吃掉', actionEmoji: '😋', category: 'baked' };
         } else if (text.includes('吐司')) {
@@ -1388,8 +1388,11 @@ class MagicBakeryApp {
             this.renderAddInteractive(container, q, 0, prefix);
         }
 
-        // 4. 第三關：減法老鼠與點心盒 (減法)
-        else if (type === 'pie-sub' || type === 'discrete-sub' || type === 'bread-sub' || type === 'ribbon-sub') {
+        // 4. 第三關：減法視覺渲染 (大餅圓形連續量 vs 盒裝點心離散量)
+        else if (type === 'pie-sub') {
+            this.renderPieSubInteractive(container, q, prefix);
+        }
+        else if (type === 'discrete-sub' || type === 'bread-sub' || type === 'ribbon-sub') {
             this.renderSubInteractive(container, q, prefix);
         }
 
@@ -1834,7 +1837,320 @@ class MagicBakeryApp {
         container.appendChild(wrapper);
     }
 
-    // 第三關：減法互動渲染 (老鼠小偷)
+
+    // 第三關專屬：連續量圓形大餅/蛋糕減法互動渲染 (pie-sub)
+    renderPieSubInteractive(container, q, prefix = 'single') {
+        container.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'pie-sub-container';
+        wrapper.style.position = 'relative';
+        wrapper.style.width = '100%';
+        wrapper.style.height = '100%';
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.justifyContent = 'center';
+        wrapper.style.gap = '12px';
+
+        const itemInfo = this.getQuestionItemInfo(q);
+        const total = q.visual.totalSlices || q.visual.totalItems || 8;
+        const initial = q.visual.initialSlices || q.visual.initialItems || 7;
+        const sub = q.visual.subSlices || q.visual.subItems || 3;
+        const icon = itemInfo.emoji;
+
+        // 頂部說明：清楚標示「張／塊」概念（1 張大餅平分成 total 塊，桌上有 initial 塊）
+        const headerCard = document.createElement('div');
+        headerCard.className = 'cut-status-tag';
+        headerCard.style.padding = '6px 16px';
+        headerCard.style.background = 'rgba(255, 255, 255, 0.08)';
+        headerCard.style.borderRadius = '12px';
+        headerCard.style.border = '1px solid var(--accent-gold)';
+        headerCard.style.fontSize = '1.02rem';
+        headerCard.style.fontWeight = '700';
+        headerCard.style.color = 'var(--text-light)';
+        headerCard.style.marginBottom = '4px';
+        headerCard.innerHTML = `${icon} 桌上有 <span class="fraction inline-frac"><span class="num-row"><span>${initial}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}${itemInfo.name}（1 ${itemInfo.unit}平分成 ${total} 塊，桌上有 ${initial} 塊）`;
+        wrapper.appendChild(headerCard);
+
+        // 老鼠圖案 (絕對定位於面板上方，吃完後滑回)
+        const mouse = document.createElement('div');
+        mouse.className = 'mouse-thief';
+        mouse.innerText = '🐭';
+        mouse.style.position = 'absolute';
+        mouse.style.fontSize = '2.8rem';
+        mouse.style.zIndex = '15';
+        mouse.style.transition = 'all 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+        mouse.style.pointerEvents = 'none';
+        mouse.style.opacity = '0';
+        mouse.style.top = '30%';
+        mouse.style.left = '10%';
+        wrapper.appendChild(mouse);
+
+        // 大餅 SVG 圓形圖
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute('class', 'magic-circle-svg');
+        svg.setAttribute('viewBox', '0 0 200 200');
+        svg.style.maxWidth = '250px';
+        svg.style.maxHeight = '250px';
+        svg.style.filter = 'drop-shadow(0 6px 14px rgba(0,0,0,0.5))';
+
+        // 圓餅烤盤底盤
+        const plate = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        plate.setAttribute('cx', '100');
+        plate.setAttribute('cy', '100');
+        plate.setAttribute('r', '88');
+        plate.setAttribute('fill', '#2d1810');
+        plate.setAttribute('stroke', '#e5a93c');
+        plate.setAttribute('stroke-width', '3');
+        svg.appendChild(plate);
+
+        const cx = 100, cy = 100, r = 85;
+        const angleStep = 360 / total;
+
+        // 切片狀態追蹤
+        const sliceStates = [];
+        this.currentRemovedCount = 0;
+
+        for (let i = 0; i < total; i++) {
+            const startAngle = i * angleStep - 90;
+            const endAngle = (i + 1) * angleStep - 90;
+
+            const rad1 = (startAngle * Math.PI) / 180;
+            const rad2 = (endAngle * Math.PI) / 180;
+
+            const x1 = cx + r * Math.cos(rad1);
+            const y1 = cy + r * Math.sin(rad1);
+            const x2 = cx + r * Math.cos(rad2);
+            const y2 = cy + r * Math.sin(rad2);
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const largeArcFlag = angleStep > 180 ? 1 : 0;
+            const dStr = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+            path.setAttribute('d', dStr);
+
+            const midAngle = (startAngle + endAngle) / 2;
+            const midRad = (midAngle * Math.PI) / 180;
+            const textX = cx + (r * 0.62) * Math.cos(midRad);
+            const textY = cy + (r * 0.62) * Math.sin(midRad);
+
+            // 文字/標記
+            const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            textEl.setAttribute('x', textX);
+            textEl.setAttribute('y', textY);
+            textEl.setAttribute('text-anchor', 'middle');
+            textEl.setAttribute('dominant-baseline', 'central');
+            textEl.setAttribute('font-size', '11px');
+            textEl.setAttribute('pointer-events', 'none');
+
+            const isPresent = i < initial;
+            sliceStates.push({
+                index: i,
+                path: path,
+                textEl: textEl,
+                isPresent: isPresent,
+                isEaten: false
+            });
+
+            const updateVisual = (idx) => {
+                const s = sliceStates[idx];
+                if (!s.isPresent) {
+                    // 原本就沒有的大餅切片 (空槽位，虛線表示平分數)
+                    s.path.setAttribute('fill', 'rgba(255,255,255,0.03)');
+                    s.path.setAttribute('stroke', 'rgba(255,255,255,0.25)');
+                    s.path.setAttribute('stroke-dasharray', '4,4');
+                    s.path.setAttribute('stroke-width', '1.5');
+                    s.path.style.cursor = 'default';
+                    s.textEl.textContent = '空';
+                    s.textEl.setAttribute('fill', 'rgba(255,255,255,0.25)');
+                } else if (s.isEaten) {
+                    // 被吃掉/移走的切片
+                    s.path.setAttribute('fill', 'rgba(255, 107, 107, 0.2)');
+                    s.path.setAttribute('stroke', '#ff6b6b');
+                    s.path.setAttribute('stroke-dasharray', '3,3');
+                    s.path.setAttribute('stroke-width', '2');
+                    s.path.style.cursor = 'pointer';
+                    s.textEl.textContent = '💥';
+                    s.textEl.setAttribute('fill', '#ff6b6b');
+                } else {
+                    // 完好的大餅切片 (金黃烤色)
+                    s.path.setAttribute('fill', '#f1bf64');
+                    s.path.setAttribute('stroke', '#8d4f13');
+                    s.path.removeAttribute('stroke-dasharray');
+                    s.path.setAttribute('stroke-width', '2');
+                    s.path.style.cursor = 'pointer';
+                    s.textEl.textContent = `第${idx + 1}塊`;
+                    s.textEl.setAttribute('fill', '#422800');
+                    s.textEl.setAttribute('font-weight', 'bold');
+                }
+            };
+
+            updateVisual(i);
+
+            // 點擊事件：手動吃掉或復原切片
+            if (isPresent) {
+                path.addEventListener('click', () => {
+                    soundEffects.playClick();
+                    sliceStates[i].isEaten = !sliceStates[i].isEaten;
+                    updateVisual(i);
+
+                    this.currentRemovedCount = sliceStates.filter(s => s.isPresent && s.isEaten).length;
+                    this.syncPieSubEquation(prefix, total, initial, this.currentRemovedCount);
+                    if (this.currentRemovedCount > 0) {
+                        infoCard.innerHTML = `✨ 目前吃掉 ${this.currentRemovedCount} 塊，還剩下 <span class="fraction inline-frac"><span class="num-row"><span>${initial - this.currentRemovedCount}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}${itemInfo.name}（${initial - this.currentRemovedCount} 塊）！`;
+                    } else {
+                        infoCard.innerHTML = `✨ 點選大餅切片即可吃掉，或召喚小老鼠幫忙！`;
+                    }
+                });
+            }
+
+            svg.appendChild(path);
+            svg.appendChild(textEl);
+        }
+
+        wrapper.appendChild(svg);
+
+        // 底部總和/說明小卡
+        const infoCard = document.createElement('div');
+        infoCard.style.padding = '6px 16px';
+        infoCard.style.background = 'rgba(0,0,0,0.3)';
+        infoCard.style.borderRadius = '12px';
+        infoCard.style.border = '1px solid var(--accent-gold)';
+        infoCard.style.textAlign = 'center';
+        infoCard.style.fontWeight = '700';
+        infoCard.style.fontSize = '0.98rem';
+        infoCard.innerHTML = `✨ 點選大餅切片即可吃掉，或召喚小老鼠幫忙！`;
+        wrapper.appendChild(infoCard);
+
+        // 操作按鈕列
+        const btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.gap = '10px';
+        btnRow.style.alignItems = 'center';
+        btnRow.style.justifyContent = 'center';
+
+        const tipBtn = document.createElement('button');
+        tipBtn.className = 'tool-btn';
+        tipBtn.innerHTML = `🐭 召喚小偷老鼠吃掉 ${sub} 塊（${sub}/${total} ${itemInfo.unit}）`;
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'tool-btn';
+        resetBtn.style.borderColor = 'var(--text-muted)';
+        resetBtn.style.color = 'var(--text-muted)';
+        resetBtn.innerHTML = `↺ 還原大餅`;
+        resetBtn.style.display = 'none';
+
+        let isAnimating = false;
+        let hasEaten = false;
+
+        tipBtn.addEventListener('click', () => {
+            if (isAnimating || hasEaten) return;
+            isAnimating = true;
+
+            // 1. 立即鎖定按鈕防止連點重複觸發
+            tipBtn.disabled = true;
+            tipBtn.style.opacity = '0.6';
+            tipBtn.style.cursor = 'not-allowed';
+            soundEffects.playClick();
+
+            // 2. 老鼠跑出來吃大餅動畫
+            mouse.style.opacity = '1';
+            mouse.style.left = '45%';
+            mouse.style.top = '35%';
+
+            setTimeout(() => {
+                // 自動吃掉 sub 塊
+                let removed = 0;
+                for (let i = initial - 1; i >= 0 && removed < sub; i--) {
+                    if (!sliceStates[i].isEaten) {
+                        sliceStates[i].isEaten = true;
+                        removed++;
+                    }
+                }
+
+                // 重新渲染切片
+                for (let i = 0; i < total; i++) {
+                    const s = sliceStates[i];
+                    if (!s.isPresent) {
+                        s.path.setAttribute('fill', 'rgba(255,255,255,0.03)');
+                        s.path.setAttribute('stroke', 'rgba(255,255,255,0.25)');
+                        s.path.setAttribute('stroke-dasharray', '4,4');
+                    } else if (s.isEaten) {
+                        s.path.setAttribute('fill', 'rgba(255, 107, 107, 0.22)');
+                        s.path.setAttribute('stroke', '#ff6b6b');
+                        s.path.setAttribute('stroke-dasharray', '3,3');
+                        s.textEl.textContent = '💥';
+                        s.textEl.setAttribute('fill', '#ff6b6b');
+                    }
+                }
+
+                this.currentRemovedCount = removed;
+                this.syncPieSubEquation(prefix, total, initial, removed);
+
+                soundEffects.playWrong();
+                ttsManager.speak(`老鼠小偷把 ${sub} 塊${itemInfo.name}吃掉囉！剩下 ${initial - sub}/${total} ${itemInfo.unit}${itemInfo.name}呢。`);
+                infoCard.innerHTML = `✨ 吃掉 ${sub} 塊，還剩下 <span class="fraction inline-frac"><span class="num-row"><span>${initial - sub}</span></span><span class="den-row"><span>${total}</span></span></span> ${itemInfo.unit}${itemInfo.name}（${initial - sub} 塊）！`;
+
+                // 3. 老鼠溜回角落
+                setTimeout(() => {
+                    mouse.style.opacity = '0';
+                    mouse.style.left = '10%';
+                    isAnimating = false;
+                    hasEaten = true;
+                    tipBtn.innerHTML = `🧀 小老鼠已經吃飽了（吃了 ${sub} 塊）`;
+                    resetBtn.style.display = 'inline-flex';
+                }, 800);
+            }, 500);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (isAnimating) return;
+            soundEffects.playClick();
+            sliceStates.forEach((s, idx) => {
+                s.isEaten = false;
+                if (s.isPresent) {
+                    s.path.setAttribute('fill', '#f1bf64');
+                    s.path.setAttribute('stroke', '#8d4f13');
+                    s.path.removeAttribute('stroke-dasharray');
+                    s.textEl.textContent = `第${idx + 1}塊`;
+                    s.textEl.setAttribute('fill', '#422800');
+                }
+            });
+            this.currentRemovedCount = 0;
+            this.syncPieSubEquation(prefix, total, initial, 0);
+            infoCard.innerHTML = `✨ 點選大餅切片即可吃掉，或召喚小老鼠幫忙！`;
+            hasEaten = false;
+            tipBtn.disabled = false;
+            tipBtn.style.opacity = '1';
+            tipBtn.style.cursor = 'pointer';
+            tipBtn.innerHTML = `🐭 召喚小偷老鼠吃掉 ${sub} 塊（${sub}/${total} ${itemInfo.unit}）`;
+            resetBtn.style.display = 'none';
+        });
+
+        btnRow.appendChild(tipBtn);
+        btnRow.appendChild(resetBtn);
+        wrapper.appendChild(btnRow);
+
+        container.appendChild(wrapper);
+    }
+
+    // 同步圓餅減法算式 helper
+    syncPieSubEquation(prefix, total, initial, removedCount) {
+        const f2Num = document.querySelector(`[data-target="${prefix}-f2-num"]`);
+        if (f2Num) {
+            f2Num.innerText = removedCount > 0 ? removedCount : '?';
+        }
+        const fansDen = document.querySelector(`[data-target="${prefix}-fans-den"]`);
+        if (fansDen && fansDen.innerText === '?') {
+            fansDen.innerText = total;
+        }
+        const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
+        if (fansNum) {
+            const ans = initial - removedCount;
+            fansNum.innerText = ans >= 0 ? ans : '?';
+        }
+    }
+
+        // 第三關：減法互動渲染 (老鼠小偷)
     renderSubInteractive(container, q, prefix = 'single') {
         container.innerHTML = '';
         const wrapper = document.createElement('div');
@@ -1958,11 +2274,37 @@ class MagicBakeryApp {
         else if (itemInfo.name === '巧克力' || itemInfo.name === '櫻桃') subUnit = '顆';
         else if (itemInfo.category === 'liquid') subUnit = '杯';
         else if (itemInfo.category === 'linear') subUnit = '段';
+
+        const btnRow = document.createElement('div');
+        btnRow.style.display = 'flex';
+        btnRow.style.gap = '10px';
+        btnRow.style.alignItems = 'center';
+        btnRow.style.justifyContent = 'center';
+
         const tipBtn = document.createElement('button');
         tipBtn.className = 'tool-btn';
         tipBtn.innerHTML = `🐭 召喚小偷老鼠${itemInfo.actionVerb} ${sub} ${subUnit}`;
+
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'tool-btn';
+        resetBtn.style.borderColor = 'var(--text-muted)';
+        resetBtn.style.color = 'var(--text-muted)';
+        resetBtn.innerHTML = `↺ 復原點心`;
+        resetBtn.style.display = 'none';
+
+        let isAnimating = false;
+        let hasEaten = false;
+
         tipBtn.addEventListener('click', () => {
+            if (isAnimating || hasEaten) return;
+            isAnimating = true;
+
+            // 1. 立即鎖定按鈕防止連點重複觸發
+            tipBtn.disabled = true;
+            tipBtn.style.opacity = '0.6';
+            tipBtn.style.cursor = 'not-allowed';
             soundEffects.playClick();
+
             // 播放老鼠跑過去動畫
             mouse.style.opacity = '1';
             mouse.style.left = '40%';
@@ -1995,11 +2337,39 @@ class MagicBakeryApp {
                 setTimeout(() => {
                     mouse.style.opacity = '0';
                     mouse.style.left = '10%';
-                }, 1000);
+                    isAnimating = false;
+                    hasEaten = true;
+                    tipBtn.innerHTML = `🧀 小老鼠已經吃飽了（${itemInfo.actionVerb} ${sub} ${subUnit}）`;
+                    resetBtn.style.display = 'inline-flex';
+                }, 800);
             }, 600);
         });
 
-        wrapper.appendChild(tipBtn);
+        resetBtn.addEventListener('click', () => {
+            if (isAnimating) return;
+            soundEffects.playClick();
+            items.forEach(item => {
+                if (item.classList.contains('filled')) {
+                    item.classList.remove('selected');
+                    item.innerText = icon;
+                }
+            });
+            this.currentRemovedCount = 0;
+            const f2Num = document.querySelector(`[data-target="${prefix}-f2-num"]`);
+            if (f2Num) f2Num.innerText = '?';
+            const fansNum = document.querySelector(`[data-target="${prefix}-fans-num"]`);
+            if (fansNum) fansNum.innerText = '?';
+            hasEaten = false;
+            tipBtn.disabled = false;
+            tipBtn.style.opacity = '1';
+            tipBtn.style.cursor = 'pointer';
+            tipBtn.innerHTML = `🐭 召喚小偷老鼠${itemInfo.actionVerb} ${sub} ${subUnit}`;
+            resetBtn.style.display = 'none';
+        });
+
+        btnRow.appendChild(tipBtn);
+        btnRow.appendChild(resetBtn);
+        wrapper.appendChild(btnRow);
         container.appendChild(wrapper);
     }
 
